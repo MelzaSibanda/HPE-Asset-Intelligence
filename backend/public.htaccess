@@ -1,5 +1,19 @@
 DirectoryIndex index.html
 
+# Explicit MIME types so Apache never falls back to text/plain
+<IfModule mod_mime.c>
+    AddType text/css                  .css
+    AddType application/javascript    .js
+    AddType application/json          .json
+    AddType image/svg+xml             .svg
+    AddType font/woff                 .woff
+    AddType font/woff2                .woff2
+    AddType image/png                 .png
+    AddType image/jpeg                .jpg .jpeg
+    AddType image/webp                .webp
+    AddType image/x-icon              .ico
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
@@ -7,7 +21,7 @@ DirectoryIndex index.html
     # /api/* requests → CodeIgniter (index.php handles all API routing)
     RewriteRule ^api(/.*)?$ index.php [L,QSA]
 
-    # Existing static FILES → serve directly (JS, CSS, images)
+    # Existing static files → serve directly (JS, CSS, images, fonts)
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
