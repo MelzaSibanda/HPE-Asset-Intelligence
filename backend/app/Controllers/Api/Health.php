@@ -11,36 +11,50 @@ class Health extends Controller
         $host = env('database.default.hostname', 'NOT SET');
         $port = (int) env('database.default.port', 3306);
         $user = env('database.default.username', 'NOT SET');
+        $pass = env('database.default.password', '');
         $db   = env('database.default.database',  'NOT SET');
 
-        // TCP reachability test
-        $sock  = @fsockopen($host, $port, $errno, $errstr, 5);
-        $tcp   = $sock !== false ? 'reachable' : "unreachable: {$errstr} (errno {$errno})";
-        if ($sock) fclose($sock);
+        $results = [];
 
-        // PDO connection test (no SSL constant dependency)
-        $pdoStatus = 'not tested';
-        $pdoError  = null;
-        if ($sock !== false || $errno === 0) {
-            try {
-                $pass = env('database.default.password', '');
-                $dsn  = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
-                $pdo = new \PDO($dsn, $user, $pass, [\PDO::ATTR_TIMEOUT => 5]);
-                $pdoStatus = 'connected (server: ' . $pdo->getAttribute(\PDO::ATTR_SERVER_VERSION) . ')';
-            } catch (\Throwable $e) {
-                $pdoStatus = 'failed';
-                $pdoError  = $e->getMessage();
-            }
+        // Test 1 — no SSL
+        try {
+            $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+            new \PDO($dsn, $user, $pass, [\PDO::ATTR_TIMEOUT => 5]);
+            $results['no_ssl'] = 'connected';
+        } catch (\Throwable $e) {
+            $results['no_ssl'] = $e->getMessage();
+        }
+
+        // Test 2 — SSL with system CA bundle, verify off (constant 1014)
+        try {
+            $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+            new \PDO($dsn, $user, $pass, [
+                \PDO::ATTR_TIMEOUT        => 5,
+                \PDO::MYSQL_ATTR_SSL_CA   => '/etc/ssl/certs/ca-certificates.crt',
+                1014                      => false, // MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
+            ]);
+            $results['ssl_no_verify'] = 'connected';
+        } catch (\Throwable $e) {
+            $results['ssl_no_verify'] = $e->getMessage();
+        }
+
+        // Test 3 — SSL with system CA bundle, verify on
+        try {
+            $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+            new \PDO($dsn, $user, $pass, [
+                \PDO::ATTR_TIMEOUT      => 5,
+                \PDO::MYSQL_ATTR_SSL_CA => '/etc/ssl/certs/ca-certificates.crt',
+            ]);
+            $results['ssl_verify'] = 'connected';
+        } catch (\Throwable $e) {
+            $results['ssl_verify'] = $e->getMessage();
         }
 
         return $this->response->setJSON([
-            'php'  => PHP_VERSION,
-            'host' => $host,
-            'port' => $port,
-            'user' => $user,
-            'db'   => $db,
-            'tcp'  => $tcp,
-            'pdo'  => ['status' => $pdoStatus, 'error' => $pdoError],
+            'php'     => PHP_VERSION,
+            'host'    => $host,
+            'port'    => $port,
+            'results' => $results,
         ]);
     }
 }
