@@ -15,14 +15,14 @@ class SensorReadingModel extends Model
     public function vibrationTrace(string $assetId, int $days = 30): array
     {
         return $this->db->query("
-            SELECT DATE(recorded_at) AS day,
-                   ROUND(AVG(vibration_rms), 3) AS vibration_rms,
-                   ROUND(AVG(temperature),  2)  AS temperature
+            SELECT recorded_at::date AS day,
+                   ROUND(AVG(vibration_rms)::numeric, 3) AS vibration_rms,
+                   ROUND(AVG(temperature)::numeric,  2)  AS temperature
             FROM   sensor_readings
             WHERE  asset_id   = ?
-              AND  recorded_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-            GROUP  BY DATE(recorded_at)
-            ORDER  BY day ASC
+              AND  recorded_at >= NOW() - (? * INTERVAL '1 day')
+            GROUP  BY recorded_at::date
+            ORDER  BY recorded_at::date ASC
         ", [$assetId, $days])->getResultArray();
     }
 

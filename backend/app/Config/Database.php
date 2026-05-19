@@ -13,14 +13,25 @@ class Database extends Config
     {
         parent::__construct();
 
-        $host = env('database.default.hostname', 'localhost');
-        $port = (int) env('database.default.port', 3306);
-        $db   = env('database.default.database', 'hpe_asset_intelligence');
-        $user = env('database.default.username', 'root');
-        $pass = env('database.default.password', '');
+        // Render provides DATABASE_URL for PostgreSQL — parse it first
+        $url = env('DATABASE_URL', '');
+        if ($url) {
+            $p    = parse_url($url);
+            $host = $p['host'] ?? 'localhost';
+            $port = $p['port'] ?? 5432;
+            $user = $p['user'] ?? '';
+            $pass = $p['pass'] ?? '';
+            $db   = ltrim($p['path'] ?? '/railway', '/');
+        } else {
+            $host = env('database.default.hostname', 'localhost');
+            $port = (int) env('database.default.port', 5432);
+            $user = env('database.default.username', '');
+            $pass = env('database.default.password', '');
+            $db   = env('database.default.database', 'railway');
+        }
 
         $this->default = [
-            'DSN'      => "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4",
+            'DSN'      => "pgsql:host={$host};port={$port};dbname={$db}",
             'hostname' => $host,
             'username' => $user,
             'password' => $pass,
@@ -29,17 +40,16 @@ class Database extends Config
             'DBPrefix' => '',
             'pConnect' => false,
             'DBDebug'  => false,
-            'charset'  => 'utf8mb4',
-            'DBCollat' => 'utf8mb4_unicode_ci',
+            'charset'  => 'utf8',
+            'DBCollat' => '',
             'swapPre'  => '',
             'compress' => false,
             'strictOn' => false,
             'failover' => [],
-            'port'     => $port,
+            'port'     => (int) $port,
             'options'  => [
-                \PDO::ATTR_TIMEOUT      => 10,
-                \PDO::MYSQL_ATTR_SSL_CA => '/etc/ssl/certs/ca-certificates.crt',
-                1014                    => false, // PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
+                \PDO::ATTR_TIMEOUT  => 10,
+                \PDO::ATTR_ERRMODE  => \PDO::ERRMODE_EXCEPTION,
             ],
         ];
     }

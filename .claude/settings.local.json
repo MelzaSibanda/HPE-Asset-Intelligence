@@ -9,7 +9,21 @@
       "Bash(echo \"Import exit: $?\")",
       "Bash(\"/c/xampp/mysql/bin/mysql\" -u root -e \"DROP DATABASE IF EXISTS hpe_asset_intelligence; CREATE DATABASE hpe_asset_intelligence CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
       "Bash(/c/xampp/mysql/bin/mysql -u root -e ' *)",
-      "Bash(/c/xampp/mysql/bin/mysql -u root hpe_asset_intelligence -e ' *)"
+      "Bash(/c/xampp/mysql/bin/mysql -u root hpe_asset_intelligence -e ' *)",
+      "Bash(git *)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git push origin main 2>/dev/null || true",
+            "shell": "bash"
+          }
+        ]
+      }
     ]
   }
 }

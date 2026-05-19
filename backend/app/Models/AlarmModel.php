@@ -23,7 +23,7 @@ class AlarmModel extends Model
             ->join('sites s',       's.id = a.current_site_id', 'left')
             ->join('asset_types at','at.id = a.type_id')
             ->where('al.status', $status)
-            ->orderBy('FIELD(al.severity,"critical","warning","info")', '', false)
+            ->orderBy("CASE al.severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END", '', false)
             ->orderBy('al.raised_at', 'DESC');
 
         if ($severity) $builder->where('al.severity', $severity);

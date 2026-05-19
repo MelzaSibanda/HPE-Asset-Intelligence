@@ -61,10 +61,10 @@ class AssetModel extends Model
     {
         return $this->db->query("
             SELECT
-                SUM(s.is_hq = 1 AND a.location_detail != 'Underground')  AS hq_workshop,
-                SUM(a.status = 'transit')                                  AS in_transit,
-                SUM(s.is_hq = 0 AND a.location_detail = 'Workshop')       AS mine_workshops,
-                SUM(a.location_detail = 'Underground')                     AS underground
+                SUM(CASE WHEN s.is_hq = 1 AND a.location_detail != 'Underground' THEN 1 ELSE 0 END) AS hq_workshop,
+                SUM(CASE WHEN a.status = 'transit' THEN 1 ELSE 0 END)                               AS in_transit,
+                SUM(CASE WHEN s.is_hq = 0 AND a.location_detail = 'Workshop' THEN 1 ELSE 0 END)     AS mine_workshops,
+                SUM(CASE WHEN a.location_detail = 'Underground' THEN 1 ELSE 0 END)                  AS underground
             FROM assets a
             LEFT JOIN sites s ON s.id = a.current_site_id
         ")->getRowArray();
@@ -75,10 +75,10 @@ class AssetModel extends Model
     {
         return $this->db->query("
             SELECT
-                COUNT(*)                                AS total_assets,
-                SUM(status NOT IN ('maintenance'))      AS in_service,
-                SUM(location_detail = 'Underground')    AS underground,
-                AVG(monthly_hours)                      AS avg_monthly_hours
+                COUNT(*)                                                           AS total_assets,
+                SUM(CASE WHEN status != 'maintenance' THEN 1 ELSE 0 END)          AS in_service,
+                SUM(CASE WHEN location_detail = 'Underground' THEN 1 ELSE 0 END)  AS underground,
+                AVG(monthly_hours)                                                 AS avg_monthly_hours
             FROM assets
         ")->getRowArray();
     }

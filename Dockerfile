@@ -11,8 +11,8 @@ RUN npm run build
 FROM php:8.1-apache
 
 RUN apt-get update && apt-get install -y \
-        git unzip libicu-dev libzip-dev \
-    && docker-php-ext-install pdo pdo_mysql mysqli intl zip \
+        git unzip libicu-dev libzip-dev libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql pdo_mysql intl zip \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
