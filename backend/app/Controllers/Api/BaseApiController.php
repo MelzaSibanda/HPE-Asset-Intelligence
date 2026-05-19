@@ -20,7 +20,13 @@ class BaseApiController extends ResourceController
         LoggerInterface   $logger
     ): void {
         parent::initController($request, $response, $logger);
-        $this->db = \Config\Database::connect();
+        try {
+            $this->db = \Config\Database::connect();
+            $this->db->connect();
+        } catch (\Throwable $e) {
+            $this->db = null;
+            log_message('critical', 'DB connection failed: ' . $e->getMessage());
+        }
     }
 
     // ── Helpers ────────────────────────────────────────────

@@ -9,6 +9,9 @@ $routes->options('(:any)', static function () {
     return service('response')->setStatusCode(200)->setBody('');
 });
 
+// ── Health check (no auth, no DB required) ───────────────────
+$routes->get('api/health', 'Api\Health::index');
+
 // ── Auth ─────────────────────────────────────────────────────
 $routes->post('api/auth/login',           'Api\Auth::login');
 $routes->post('api/auth/logout',          'Api\Auth::logout');

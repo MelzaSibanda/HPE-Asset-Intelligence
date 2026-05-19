@@ -8,6 +8,13 @@ class Auth extends BaseApiController
 {
     public function login()
     {
+        if ($this->db === null) {
+            return $this->respond([
+                'status'  => 'error',
+                'message' => 'Database unavailable — check server environment variables.',
+            ], 503);
+        }
+
         helper('jwt');
 
         $body = $this->body();
