@@ -38,7 +38,8 @@ COPY backend/apache.conf /etc/apache2/sites-available/000-default.conf
 RUN chown -R www-data:www-data writable
 
 COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+# Strip Windows CRLF line endings so bash can parse the shebang on Linux
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["apache2-foreground"]
