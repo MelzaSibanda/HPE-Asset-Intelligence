@@ -1,0 +1,1135 @@
+<!--
+  hpe_demo_prototype.html
+  HPE Asset Intelligence — interactive Figma-style clickable sales demo (9 screens)
+  Keyboard shortcuts:
+    H       — toggle hotspot outlines on/off
+    ← →     — previous / next screen
+    R       — restart (jump to screen 1)
+    1–9     — jump directly to numbered screen
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1">
+  <title>HPE Asset Intelligence — Demo Prototype</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; background: #F9FAFB; padding-top: 40px; }
+
+    /* ── Control bar ── */
+    #ctrl {
+      position: fixed; top: 0; left: 0; right: 0; height: 40px;
+      background: #1e293b; color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; z-index: 9999; font-size: 12px;
+    }
+    #ctrl strong { font-size: 12px; letter-spacing: .02em; }
+    #ctrl button {
+      background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.18);
+      color: #fff; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;
+    }
+    #ctrl button:hover { background: rgba(255,255,255,.25); }
+    #ctrl button:disabled { opacity: .35; cursor: default; }
+    #ctrl .sep { color: rgba(255,255,255,.3); margin: 0 4px; }
+
+    /* ── Product nav (fixed below ctrl bar) ── */
+    #pnav {
+      position: fixed; top: 40px; left: 0; right: 0; height: 56px;
+      background: #fff; border-bottom: 1px solid #E5E7EB;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; z-index: 100;
+    }
+
+    /* ── Screens ── */
+    .screen { display: none; min-height: calc(100vh - 96px); padding-top: 96px; }
+    .screen.active { display: block; animation: fadein .2s ease; }
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+    #screen-1 { padding-top: 40px; min-height: 100vh; display: none; }
+    #screen-1.active { display: flex; align-items: center; justify-content: center; background: #F3F4F6; }
+
+    /* ── Hotspots ── */
+    .hotspot { cursor: pointer; }
+    body.show-hotspots .hotspot { outline: 2px dashed #3B82F6 !important; outline-offset: 4px; border-radius: 3px; }
+
+    /* ── Nav items ── */
+    .ni { padding: 6px 12px; border-radius: 6px; font-size: 14px; font-weight: 500; color: #374151; white-space: nowrap; display: inline-block; }
+    .ni:hover { background: #F3F4F6; }
+    .ni.active-nav { background: #1F4E78; color: #fff !important; }
+
+    /* ── Badges / pills ── */
+    .pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .p-crit { background: #EF4444; color: #fff; }
+    .p-warn { background: #F59E0B; color: #fff; }
+    .p-ok   { background: #D1FAE5; color: #065F46; }
+    .p-maint{ background: #F3F4F6; color: #374151; }
+    .p-ug   { background: #DBEAFE; color: #1E40AF; }
+    .p-move { background: #EDE9FE; color: #5B21B6; }
+    .p-svc  { background: #D1FAE5; color: #065F46; }
+
+    /* ── Cards ── */
+    .card { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; }
+
+    /* ── Buttons ── */
+    .btn-pri { background: #1F4E78; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .btn-pri:hover { background: #19406a; }
+    .btn-out { background: #fff; color: #374151; border: 1px solid #D1D5DB; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .btn-out:hover { background: #F9FAFB; }
+
+    /* ── Table ── */
+    .tbl { width: 100%; border-collapse: collapse; }
+    .tbl th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: .05em; background: #F9FAFB; border-bottom: 1px solid #E5E7EB; }
+    .tbl td { padding: 11px 16px; font-size: 13px; color: #374151; border-bottom: 1px solid #F3F4F6; vertical-align: middle; }
+    .tbl tr:hover td { background: #F9FAFB; }
+    .tbl .crit-row td:first-child { border-left: 3px solid #EF4444; padding-left: 13px; }
+
+    /* ── Timeline ── */
+    .tl-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .tl-line { width: 2px; background: #E5E7EB; flex-grow: 1; margin: 4px auto 0; }
+
+    /* ── Bar fill ── */
+    .bar-fill { height: 28px; border-radius: 4px; background: #1F4E78; display: flex; align-items: center; padding-left: 8px; }
+
+    /* ── Kv row ── */
+    .kv { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #F3F4F6; font-size: 13px; }
+    .kv:last-child { border-bottom: none; }
+    .kv .k { color: #6B7280; }
+    .kv .v { font-weight: 500; color: #111827; }
+
+    code { font-family: "SF Mono", "Cascadia Code", Consolas, monospace; }
+  </style>
+</head>
+<body>
+
+<!-- ═══ CONTROL BAR ═══ -->
+<div id="ctrl">
+  <strong>HPE Asset Intelligence — Demo Prototype</strong>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <button id="btn-hs" onclick="toggleHS()">Show hotspots (H)</button>
+    <span class="sep">|</span>
+    <button id="btn-prev" onclick="go(cur-1)" disabled>&#8592; Prev</button>
+    <span id="ind" style="min-width:52px;text-align:center;opacity:.75;font-size:12px;">1 of 9</span>
+    <button id="btn-next" onclick="go(cur+1)">Next &#8594;</button>
+    <span class="sep">|</span>
+    <button onclick="go(1)">&#8635; Restart (R)</button>
+  </div>
+</div>
+
+<!-- ═══ PRODUCT NAV ═══ -->
+<div id="pnav" style="display:none;">
+  <div style="display:flex;align-items:center;gap:24px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <i data-lucide="activity" style="color:#1F4E78;width:20px;height:20px;flex-shrink:0;"></i>
+      <span style="font-weight:700;font-size:15px;color:#111827;white-space:nowrap;">HPE Asset Intelligence</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:2px;">
+      <span class="hotspot ni" data-target="2" data-nav="ov">Overview</span>
+      <span class="hotspot ni" data-target="3" data-nav="map">Live map</span>
+      <span class="hotspot ni" data-target="5" data-nav="alarms">Alarms</span>
+      <span class="hotspot ni" data-target="6" data-nav="assets">Assets</span>
+      <span class="hotspot ni" data-target="8" data-nav="reports">Reports</span>
+      <span class="hotspot ni" data-target="9" data-nav="settings">Settings</span>
+    </div>
+  </div>
+  <div style="width:36px;height:36px;border-radius:50%;background:#1F4E78;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">WN</div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+
+<!-- ─── SCREEN 1: Login ─── -->
+<section id="screen-1" class="screen active">
+  <div class="card" style="width:420px;padding:44px 40px;box-shadow:0 8px 40px rgba(0,0,0,.10);">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:#EFF6FF;border-radius:14px;margin-bottom:16px;">
+        <i data-lucide="radio" style="color:#1F4E78;width:28px;height:28px;"></i>
+      </div>
+      <h1 style="font-size:21px;font-weight:700;color:#111827;margin:0 0 6px;">HPE Asset Intelligence</h1>
+      <p style="font-size:13px;color:#6B7280;margin:0;">RFID Asset Tracking &amp; Condition Monitoring</p>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px;">Email</label>
+      <input type="email" value="werner.nienaber@hpesa.com" readonly style="width:100%;padding:10px 12px;border:1px solid #D1D5DB;border-radius:6px;font-size:14px;color:#374151;background:#F9FAFB;">
+    </div>
+    <div style="margin-bottom:24px;">
+      <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px;">Password</label>
+      <input type="password" value="password123" readonly style="width:100%;padding:10px 12px;border:1px solid #D1D5DB;border-radius:6px;font-size:14px;background:#F9FAFB;">
+    </div>
+    <div class="hotspot" data-target="2" style="margin-bottom:16px;">
+      <button class="btn-pri" style="width:100%;padding:11px;font-size:15px;">Sign in</button>
+    </div>
+    <p style="text-align:center;font-size:12px;color:#9CA3AF;margin:0;display:flex;align-items:center;justify-content:center;gap:6px;">
+      <i data-lucide="shield-check" style="width:13px;height:13px;"></i>
+      Single sign-on via HPE Active Directory
+    </p>
+  </div>
+</section>
+
+<!-- ─── SCREEN 2: Dashboard ─── -->
+<section id="screen-2" class="screen">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 24px 40px;">
+    <div style="margin-bottom:24px;">
+      <h1 style="font-size:24px;font-weight:700;color:#111827;margin:0 0 4px;">Good morning, Werner</h1>
+      <p style="font-size:13px;color:#6B7280;margin:0;">Monday, 11 May 2026 &middot; 09:42 SAST</p>
+    </div>
+
+    <!-- KPI row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+      <div class="card" style="padding:20px;">
+        <div style="font-size:12px;color:#6B7280;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><i data-lucide="tag" style="width:13px;height:13px;"></i> Tagged assets</div>
+        <div style="font-size:30px;font-weight:700;color:#111827;line-height:1;">7,482</div>
+        <div style="font-size:12px;color:#6B7280;margin-top:6px;">of 7,500 deployed</div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <div style="font-size:12px;color:#6B7280;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><i data-lucide="zap" style="width:13px;height:13px;"></i> In service today</div>
+        <div style="font-size:30px;font-weight:700;color:#111827;line-height:1;">6,914</div>
+        <div style="font-size:12px;color:#10B981;margin-top:6px;font-weight:500;">92.4% utilisation</div>
+      </div>
+      <div class="card" style="padding:20px;border-left:3px solid #EF4444;">
+        <div style="font-size:12px;color:#6B7280;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><i data-lucide="alert-circle" style="width:13px;height:13px;color:#EF4444;"></i> Active alarms</div>
+        <div style="font-size:30px;font-weight:700;color:#EF4444;line-height:1;">17</div>
+        <div style="font-size:12px;color:#6B7280;margin-top:6px;">4 critical &middot; 13 warning</div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <div style="font-size:12px;color:#6B7280;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><i data-lucide="clock" style="width:13px;height:13px;"></i> Avg drill duty 24h</div>
+        <div style="font-size:30px;font-weight:700;color:#111827;line-height:1;">3.8 h</div>
+        <div style="font-size:12px;color:#10B981;margin-top:6px;font-weight:500;">within spec</div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div class="card" style="padding:20px;">
+        <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:16px;">Fleet location</div>
+        <div style="position:relative;height:200px;"><canvas id="chart-fleet"></canvas></div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px;">Drill duty profile, last 24 hours</div>
+        <div style="font-size:12px;color:#6B7280;margin-bottom:12px;">Currently 3,142 drilling</div>
+        <div style="position:relative;height:200px;"><canvas id="chart-duty"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Active alarms table -->
+    <div class="card" style="padding:20px;">
+      <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:16px;">Active alarms</div>
+      <table class="tbl">
+        <thead><tr><th>Severity</th><th>Asset ID</th><th>Description</th><th>Site</th><th>Raised</th><th>Age</th><th></th></tr></thead>
+        <tbody>
+          <tr class="crit-row">
+            <td><span class="pill p-crit">CRITICAL</span></td>
+            <td><code style="font-weight:700;font-size:13px;">DRL-04217</code></td>
+            <td>Vibration threshold exceeded — chuck bearing wear</td>
+            <td>Tau Tona</td><td>09:33</td><td>9m</td>
+            <td><div class="hotspot" data-target="4"><button class="btn-pri" style="padding:5px 12px;font-size:12px;">View</button></div></td>
+          </tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">PMP-00184</code></td><td>Temperature trending high — 89 °C, threshold 90 °C</td><td>Mponeng</td><td>08:14</td><td>1h 28m</td><td></td></tr>
+          <tr class="crit-row"><td><span class="pill p-crit">CRITICAL</span></td><td><code style="font-weight:700;font-size:13px;">DRL-08812</code></td><td>Missing heartbeat — tag not seen for 110 minutes</td><td>Driefontein</td><td>07:52</td><td>1h 50m</td><td></td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">DRL-04590</code></td><td>Low battery — 8% remaining, est. 14 days</td><td>South Deep</td><td>06:33</td><td>3h 9m</td><td></td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">PMP-00097</code></td><td>Signature drift — vibration pattern shifted 12%</td><td>Kloof</td><td>05:21</td><td>4h 21m</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SCREEN 3: Live map ─── -->
+<section id="screen-3" class="screen">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 24px 40px;">
+    <div style="display:grid;grid-template-columns:1fr 264px;gap:16px;">
+      <div>
+        <!-- Map card -->
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <span style="font-size:14px;font-weight:600;color:#111827;">Site map — West Rand / Far West Rand</span>
+            <span style="font-size:12px;color:#6B7280;">6 mine sites · 7,482 tagged assets</span>
+          </div>
+          <div style="background:#EEF2F7;border-radius:8px;overflow:hidden;border:1px solid #E5E7EB;">
+            <svg viewBox="0 0 720 340" style="width:100%;display:block;">
+              <!-- Province fills -->
+              <polygon points="60,10 660,12 695,185 640,310 100,315 38,188" fill="#E4EBF5" stroke="#C7D4E8" stroke-width="1.5" stroke-linejoin="round"/>
+              <polygon points="38,188 100,315 640,310 660,345 30,345" fill="#DDE5F0" stroke="#C7D4E8" stroke-width="1"/>
+              <!-- Province labels -->
+              <text x="580" y="190" fill="#94A3B8" font-size="13" font-style="italic" font-family="Georgia,serif">Gauteng</text>
+              <text x="80" y="338" fill="#94A3B8" font-size="11" font-style="italic" font-family="Georgia,serif">Free State</text>
+              <!-- Road grid (decorative) -->
+              <line x1="60" y1="165" x2="680" y2="165" stroke="#D1D5DB" stroke-width="1" stroke-dasharray="3,5"/>
+              <line x1="300" y1="10" x2="295" y2="315" stroke="#D1D5DB" stroke-width="1" stroke-dasharray="3,5"/>
+              <!-- Randburg HQ -->
+              <circle cx="510" cy="68" r="24" fill="#3B82F6" opacity=".15"/>
+              <circle cx="510" cy="68" r="17" fill="#3B82F6"/>
+              <text x="510" y="64" text-anchor="middle" fill="white" font-size="10" font-weight="700">HQ</text>
+              <text x="510" y="75" text-anchor="middle" fill="white" font-size="9">684</text>
+              <text x="510" y="99" text-anchor="middle" fill="#374151" font-size="11" font-weight="500">Randburg</text>
+              <!-- Kloof 703 — alarm -->
+              <circle cx="150" cy="108" r="27" fill="#1F4E78" opacity=".12"/>
+              <circle cx="150" cy="108" r="20" fill="#1F4E78"/>
+              <text x="150" y="104" text-anchor="middle" fill="white" font-size="10" font-weight="700">Kloof</text>
+              <text x="150" y="116" text-anchor="middle" fill="white" font-size="9">703</text>
+              <circle cx="163" cy="90" r="6" fill="#EF4444"/><circle cx="163" cy="90" r="3" fill="white"/>
+              <!-- Mponeng 1612 — alarm -->
+              <circle cx="95" cy="198" r="42" fill="#1F4E78" opacity=".12"/>
+              <circle cx="95" cy="198" r="35" fill="#1F4E78"/>
+              <text x="95" y="193" text-anchor="middle" fill="white" font-size="11" font-weight="700">Mponeng</text>
+              <text x="95" y="206" text-anchor="middle" fill="white" font-size="9">1,612</text>
+              <circle cx="112" cy="177" r="7" fill="#EF4444"/><circle cx="112" cy="177" r="3.5" fill="white"/>
+              <!-- Tau Tona 1184 — alarm, HOTSPOT → screen 4 -->
+              <circle cx="215" cy="228" r="37" fill="#1F4E78" opacity=".12"/>
+              <circle cx="215" cy="228" r="30" fill="#1F4E78" class="hotspot" data-target="4" style="cursor:pointer;"/>
+              <text x="215" y="222" text-anchor="middle" fill="white" font-size="11" font-weight="700" style="pointer-events:none;">Tau Tona</text>
+              <text x="215" y="235" text-anchor="middle" fill="white" font-size="9" style="pointer-events:none;">1,184</text>
+              <circle cx="231" cy="207" r="6" fill="#EF4444" style="pointer-events:none;"/><circle cx="231" cy="207" r="3" fill="white" style="pointer-events:none;"/>
+              <text x="215" y="274" text-anchor="middle" fill="#3B82F6" font-size="10" font-style="italic" style="pointer-events:none;">&#x2191; click to explore</text>
+              <!-- Driefontein 986 -->
+              <circle cx="322" cy="215" r="32" fill="#1F4E78" opacity=".12"/>
+              <circle cx="322" cy="215" r="25" fill="#1F4E78"/>
+              <text x="322" y="210" text-anchor="middle" fill="white" font-size="10" font-weight="700">Driefontein</text>
+              <text x="322" y="222" text-anchor="middle" fill="white" font-size="9">986</text>
+              <!-- Kusasalethu 804 -->
+              <circle cx="162" cy="290" r="29" fill="#1F4E78" opacity=".12"/>
+              <circle cx="162" cy="290" r="22" fill="#1F4E78"/>
+              <text x="162" y="285" text-anchor="middle" fill="white" font-size="9" font-weight="700">Kusasalethu</text>
+              <text x="162" y="297" text-anchor="middle" fill="white" font-size="9">804</text>
+              <!-- South Deep 1278 -->
+              <circle cx="430" cy="262" r="37" fill="#1F4E78" opacity=".12"/>
+              <circle cx="430" cy="262" r="30" fill="#1F4E78"/>
+              <text x="430" y="257" text-anchor="middle" fill="white" font-size="10" font-weight="700">South Deep</text>
+              <text x="430" y="270" text-anchor="middle" fill="white" font-size="9">1,278</text>
+              <!-- Legend -->
+              <rect x="560" y="278" width="148" height="40" rx="5" fill="white" opacity=".85"/>
+              <circle cx="575" cy="293" r="5" fill="#EF4444"/><circle cx="575" cy="293" r="2.5" fill="white"/>
+              <text x="585" y="297" fill="#374151" font-size="10">Active critical alarm</text>
+              <circle cx="575" cy="308" r="5" fill="#1F4E78"/>
+              <text x="585" y="312" fill="#374151" font-size="10">Mine site (scaled)</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Heat map -->
+        <div class="card" style="padding:20px;">
+          <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:16px;">Underground time-in-shaft heat map</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <!-- max 16h for scale -->
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:160px;font-size:12px;color:#374151;flex-shrink:0;">Mponeng 4-shaft</div>
+              <div style="flex:1;background:#F3F4F6;border-radius:4px;height:24px;"><div class="bar-fill" style="width:88.75%;"><span style="font-size:11px;color:rgba(255,255,255,.9);font-weight:600;">14.2 h/day</span></div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:160px;font-size:12px;color:#374151;flex-shrink:0;">Mponeng 1-shaft</div>
+              <div style="flex:1;background:#F3F4F6;border-radius:4px;height:24px;"><div class="bar-fill" style="width:78.75%;"><span style="font-size:11px;color:rgba(255,255,255,.9);font-weight:600;">12.6 h/day</span></div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:160px;font-size:12px;color:#374151;flex-shrink:0;">Tau Tona main decline</div>
+              <div style="flex:1;background:#F3F4F6;border-radius:4px;height:24px;"><div class="bar-fill" style="width:71.875%;"><span style="font-size:11px;color:rgba(255,255,255,.9);font-weight:600;">11.5 h/day</span></div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:160px;font-size:12px;color:#374151;flex-shrink:0;">South Deep twin</div>
+              <div style="flex:1;background:#F3F4F6;border-radius:4px;height:24px;"><div class="bar-fill" style="width:63.75%;"><span style="font-size:11px;color:rgba(255,255,255,.9);font-weight:600;">10.2 h/day</span></div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:160px;font-size:12px;color:#374151;flex-shrink:0;">Driefontein 5-shaft</div>
+              <div style="flex:1;background:#F3F4F6;border-radius:4px;height:24px;"><div class="bar-fill" style="width:56.25%;"><span style="font-size:11px;color:rgba(255,255,255,.9);font-weight:600;">9.0 h/day</span></div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:160px;font-size:12px;color:#374151;flex-shrink:0;">Kusasalethu main</div>
+              <div style="flex:1;background:#F3F4F6;border-radius:4px;height:24px;"><div class="bar-fill" style="width:48.125%;"><span style="font-size:11px;color:rgba(255,255,255,.9);font-weight:600;">7.7 h/day</span></div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:160px;font-size:12px;color:#374151;flex-shrink:0;">Kloof 7-shaft</div>
+              <div style="flex:1;background:#F3F4F6;border-radius:4px;height:24px;"><div class="bar-fill" style="width:37.5%;"><span style="font-size:11px;color:rgba(255,255,255,.9);font-weight:600;">6.0 h/day</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar filters -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="card" style="padding:16px;">
+          <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:14px;">Filters</div>
+          <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:6px;">Asset type</label>
+            <select style="width:100%;padding:7px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:13px;color:#374151;">
+              <option>All</option><option>Drills</option><option>Pumps</option><option>Thrust legs</option>
+            </select>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:6px;">Status</label>
+            <select style="width:100%;padding:7px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:13px;color:#374151;">
+              <option>All</option><option>In service</option><option>In transit</option><option>Underground</option><option>In workshop</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#F9FAFB;border-radius:6px;">
+            <input type="checkbox" id="alarms-only" style="width:16px;height:16px;">
+            <label for="alarms-only" style="font-size:12px;color:#374151;cursor:pointer;">With active alarms only</label>
+          </div>
+        </div>
+        <div class="card" style="padding:16px;">
+          <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:10px;">Site summary</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:#6B7280;">Mponeng</span><span style="font-weight:600;">1,612</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:#6B7280;">South Deep</span><span style="font-weight:600;">1,278</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:#6B7280;">Tau Tona</span><span style="font-weight:600;">1,184</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:#6B7280;">Driefontein</span><span style="font-weight:600;">986</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:#6B7280;">Kusasalethu</span><span style="font-weight:600;">804</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:#6B7280;">Kloof</span><span style="font-weight:600;">703</span></div>
+            <div style="border-top:1px solid #E5E7EB;margin-top:4px;padding-top:8px;display:flex;justify-content:space-between;font-size:12px;"><span style="color:#6B7280;">HQ (Randburg)</span><span style="font-weight:600;">684</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SCREEN 4: Asset detail ─── -->
+<section id="screen-4" class="screen">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 24px 40px;">
+    <!-- Breadcrumb -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;font-size:13px;">
+      <span class="hotspot" data-target="6" style="color:#3B82F6;cursor:pointer;">Assets</span>
+      <i data-lucide="chevron-right" style="width:14px;height:14px;color:#9CA3AF;"></i>
+      <span style="color:#374151;font-weight:500;">DRL-04217</span>
+    </div>
+
+    <!-- Header card -->
+    <div class="card" style="padding:24px;margin-bottom:16px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+            <h1 style="font-size:26px;font-weight:700;color:#111827;margin:0;">DRL-04217</h1>
+            <span class="pill p-crit" style="font-size:12px;padding:3px 10px;">Critical alarm</span>
+            <span class="pill p-ug" style="font-size:12px;padding:3px 10px;">Underground</span>
+          </div>
+          <p style="font-size:13px;color:#6B7280;margin:0;">Hydro rock drill &middot; HPE model RD-9000 &middot; serial RD9-2024-04217 &middot; Tau Tona main decline</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-shrink:0;">
+          <div class="hotspot" data-target="5"><button class="btn-out">Acknowledge alarm</button></div>
+          <div class="hotspot" data-target="9"><button class="btn-pri">Create work order</button></div>
+        </div>
+      </div>
+      <!-- KPI mini-cards -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+        <div style="background:#F9FAFB;border-radius:7px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><i data-lucide="clock" style="width:13px;height:13px;color:#6B7280;"></i><span style="font-size:11px;color:#6B7280;">Lifetime hours</span></div>
+          <div style="font-size:22px;font-weight:700;color:#111827;">2,847</div>
+        </div>
+        <div style="background:#F9FAFB;border-radius:7px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><i data-lucide="calendar" style="width:13px;height:13px;color:#6B7280;"></i><span style="font-size:11px;color:#6B7280;">Hours this month</span></div>
+          <div style="font-size:22px;font-weight:700;color:#111827;">112</div>
+        </div>
+        <div style="background:#FEF2F2;border-radius:7px;padding:14px;border:1px solid #FECACA;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><i data-lucide="activity" style="width:13px;height:13px;color:#EF4444;"></i><span style="font-size:11px;color:#EF4444;">Vibration RMS</span></div>
+          <div style="font-size:22px;font-weight:700;color:#EF4444;">4.2 g</div>
+        </div>
+        <div style="background:#F9FAFB;border-radius:7px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><i data-lucide="thermometer" style="width:13px;height:13px;color:#6B7280;"></i><span style="font-size:11px;color:#6B7280;">Temperature</span></div>
+          <div style="font-size:22px;font-weight:700;color:#111827;">87 °C</div>
+        </div>
+        <div style="background:#F9FAFB;border-radius:7px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><i data-lucide="battery-medium" style="width:13px;height:13px;color:#6B7280;"></i><span style="font-size:11px;color:#6B7280;">Battery</span></div>
+          <div style="font-size:22px;font-weight:700;color:#111827;">62%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;">
+      <div class="card hotspot" data-target="7" style="padding:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:14px;font-weight:600;color:#111827;">Vibration trace, last 30 days</span>
+          <span style="font-size:11px;color:#3B82F6;display:flex;align-items:center;gap:4px;"><i data-lucide="zoom-in" style="width:12px;height:12px;"></i>Click to drill into the physics</span>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:12px;">
+          <span style="font-size:11px;color:#F59E0B;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:20px;border-top:2px dashed #F59E0B;"></span>Warning 2.5 g</span>
+          <span style="font-size:11px;color:#EF4444;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:20px;border-top:2px dashed #EF4444;"></span>Alarm 3.5 g</span>
+        </div>
+        <div style="position:relative;height:200px;"><canvas id="chart-vibration"></canvas></div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:16px;">Asset registry</div>
+        <div class="kv"><span class="k">Asset ID</span><code class="v" style="font-size:13px;">DRL-04217</code></div>
+        <div class="kv"><span class="k">EPC tag</span><code class="v" style="font-size:11px;">E280689400005014217</code></div>
+        <div class="kv"><span class="k">Type</span><span class="v">Hydro rock drill</span></div>
+        <div class="kv"><span class="k">Model</span><span class="v">RD-9000</span></div>
+        <div class="kv"><span class="k">Commissioned</span><span class="v">14 Mar 2024</span></div>
+        <div class="kv"><span class="k">Tagged</span><span class="v">22 Mar 2024</span></div>
+        <div class="kv"><span class="k">Current site</span><span class="v">Tau Tona</span></div>
+        <div class="kv"><span class="k">Last service</span><span class="v">8 Apr 2026 (33d ago)</span></div>
+        <div class="kv"><span class="k">Next due</span><span class="v" style="color:#EF4444;font-weight:700;">overdue</span></div>
+      </div>
+    </div>
+
+    <!-- Timeline + Diagnostics row -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
+      <div class="card" style="padding:20px;">
+        <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:16px;">Lifecycle timeline &middot; last 14 days</div>
+        <div style="display:flex;flex-direction:column;">
+          <!-- Timeline items -->
+          <div style="display:flex;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:11px;">
+              <div class="tl-dot" style="background:#EF4444;"></div>
+              <div class="tl-line"></div>
+            </div>
+            <div style="padding-bottom:16px;flex:1;">
+              <div style="font-size:11px;color:#9CA3AF;margin-bottom:2px;">Today 09:33</div>
+              <div style="font-size:13px;color:#111827;">Critical alarm raised — vibration threshold exceeded (4.2 g)</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:11px;">
+              <div class="tl-dot" style="background:#F59E0B;"></div>
+              <div class="tl-line"></div>
+            </div>
+            <div style="padding-bottom:16px;flex:1;">
+              <div style="font-size:11px;color:#9CA3AF;margin-bottom:2px;">6 May 2026 &middot; 14:21</div>
+              <div style="font-size:13px;color:#111827;">Warning raised — elevated vibration detected (3.0 g)</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:11px;">
+              <div class="tl-dot" style="background:#6366F1;"></div>
+              <div class="tl-line"></div>
+            </div>
+            <div style="padding-bottom:16px;flex:1;">
+              <div style="font-size:11px;color:#9CA3AF;margin-bottom:2px;">5 May 2026 &middot; 06:15</div>
+              <div style="font-size:13px;color:#111827;"><span class="pill p-move" style="font-size:10px;margin-right:6px;">Dispatched UG</span>Tau Tona main decline</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:11px;">
+              <div class="tl-dot" style="background:#6366F1;"></div>
+              <div class="tl-line"></div>
+            </div>
+            <div style="padding-bottom:16px;flex:1;">
+              <div style="font-size:11px;color:#9CA3AF;margin-bottom:2px;">4 May 2026 &middot; 18:42</div>
+              <div style="font-size:13px;color:#111827;"><span class="pill p-move" style="font-size:10px;margin-right:6px;">Returned from UG</span>Signed in at Tau Tona workshop</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:11px;">
+              <div class="tl-dot" style="background:#6366F1;"></div>
+              <div class="tl-line"></div>
+            </div>
+            <div style="padding-bottom:16px;flex:1;">
+              <div style="font-size:11px;color:#9CA3AF;margin-bottom:2px;">4 May 2026 &middot; 06:08</div>
+              <div style="font-size:13px;color:#111827;"><span class="pill p-move" style="font-size:10px;margin-right:6px;">Dispatched UG</span>Tau Tona main decline</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:11px;">
+              <div class="tl-dot" style="background:#6366F1;"></div>
+              <div class="tl-line"></div>
+            </div>
+            <div style="padding-bottom:16px;flex:1;">
+              <div style="font-size:11px;color:#9CA3AF;margin-bottom:2px;">2 May 2026 &middot; 11:34</div>
+              <div style="font-size:13px;color:#111827;"><span class="pill p-move" style="font-size:10px;margin-right:6px;">Received at mine</span>Tau Tona workshop intake</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:11px;">
+              <div class="tl-dot" style="background:#6366F1;"></div>
+              <div class="tl-line"></div>
+            </div>
+            <div style="padding-bottom:16px;flex:1;">
+              <div style="font-size:11px;color:#9CA3AF;margin-bottom:2px;">28 Apr 2026 &middot; 14:20</div>
+              <div style="font-size:13px;color:#111827;"><span class="pill p-move" style="font-size:10px;margin-right:6px;">Dispatched HQ</span>In transit to Tau Tona</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:11px;">
+              <div class="tl-dot" style="background:#10B981;"></div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:11px;color:#9CA3AF;margin-bottom:2px;">8 Apr 2026 &middot; 10:15</div>
+              <div style="font-size:13px;color:#111827;"><span class="pill p-svc" style="font-size:10px;margin-right:6px;">Service complete</span>Chuck assembly replaced, pressure tested</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:20px;">
+        <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:16px;">Diagnostic snapshot</div>
+        <div class="kv"><span class="k">Vibration RMS</span><span class="v" style="color:#EF4444;">4.2 g</span></div>
+        <div class="kv"><span class="k">Peak-to-peak</span><span class="v">8.7 g</span></div>
+        <div class="kv"><span class="k">Dominant freq.</span><span class="v">49.2 Hz</span></div>
+        <div class="kv"><span class="k">Temperature</span><span class="v">87 °C</span></div>
+        <div class="kv"><span class="k">Hydraulic pressure</span><span class="v">185 bar</span></div>
+        <div class="kv"><span class="k">Water flow</span><span class="v">22 L/min</span></div>
+        <div style="margin-top:16px;padding:14px;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:7px;">
+          <div style="font-size:12px;font-weight:700;color:#991B1B;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+            <i data-lucide="alert-triangle" style="width:13px;height:13px;"></i>
+            Recommended action
+          </div>
+          <p style="font-size:12px;color:#B91C1C;line-height:1.55;margin:0;">Recall to surface this shift. Vibration signature and frequency shift consistent with chuck bearing wear. Spare RD-9000 available at Tau Tona workshop, slot 14.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SCREEN 5: Alarms list ─── -->
+<section id="screen-5" class="screen">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 24px 40px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <h1 style="font-size:24px;font-weight:700;color:#111827;margin:0;">Active alarms <span style="color:#6B7280;font-weight:400;font-size:20px;">(17)</span></h1>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;background:#1F4E78;color:#fff;border:none;cursor:pointer;">All</button>
+        <button style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;background:#FEE2E2;color:#991B1B;border:none;cursor:pointer;">Critical (4)</button>
+        <button style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;background:#FEF3C7;color:#92400E;border:none;cursor:pointer;">Warning (13)</button>
+        <button style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;background:#F3F4F6;color:#374151;border:none;cursor:pointer;">Info</button>
+        <button style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;background:#F3F4F6;color:#374151;border:none;cursor:pointer;">Acknowledged</button>
+      </div>
+    </div>
+    <div class="card" style="overflow:hidden;">
+      <table class="tbl">
+        <thead><tr><th>Severity</th><th>Asset ID</th><th>Description</th><th>Site</th><th>Raised</th><th>Age</th></tr></thead>
+        <tbody>
+          <tr class="crit-row hotspot" data-target="4">
+            <td><span class="pill p-crit">CRITICAL</span></td><td><code style="font-weight:700;font-size:13px;">DRL-04217</code></td><td>Vibration threshold exceeded — chuck bearing wear (4.2 g)</td><td>Tau Tona</td><td>09:33</td><td>9m</td>
+          </tr>
+          <tr class="crit-row"><td><span class="pill p-crit">CRITICAL</span></td><td><code style="font-weight:700;font-size:13px;">DRL-08812</code></td><td>Missing heartbeat — tag not seen for 110 minutes</td><td>Driefontein</td><td>07:52</td><td>1h 50m</td></tr>
+          <tr class="crit-row"><td><span class="pill p-crit">CRITICAL</span></td><td><code style="font-weight:700;font-size:13px;">DRL-09123</code></td><td>Critical vibration — 5.1 g, alarm threshold 3.5 g</td><td>South Deep</td><td>01:05</td><td>8h 37m</td></tr>
+          <tr class="crit-row"><td><span class="pill p-crit">CRITICAL</span></td><td><code style="font-weight:700;font-size:13px;">PMP-00097</code></td><td>Signature drift — vibration pattern shifted 12% from baseline</td><td>Kloof</td><td>05:21</td><td>4h 21m</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">PMP-00184</code></td><td>Temperature trending high — 89 °C, threshold 90 °C</td><td>Mponeng</td><td>08:14</td><td>1h 28m</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">DRL-04590</code></td><td>Low battery — 8% remaining, estimated 14 days life</td><td>South Deep</td><td>06:33</td><td>3h 9m</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">DRL-02341</code></td><td>Out-of-sequence movement — dispatched UG without workshop sign-out</td><td>Kusasalethu</td><td>04:15</td><td>5h 27m</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">DRL-06754</code></td><td>Elevated vibration — 2.9 g, trending upward last 6 hours</td><td>Tau Tona</td><td>03:42</td><td>6h</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">PMP-00521</code></td><td>Temperature spike — brief 97 °C excursion, currently cooling</td><td>Mponeng</td><td>02:18</td><td>7h 24m</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">DRL-03456</code></td><td>Battery approaching end-of-life — 11% remaining</td><td>Driefontein</td><td>Yesterday</td><td>22h</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">THL-00892</code></td><td>Sensor timeout — no reading for 2 consecutive hours</td><td>Mponeng</td><td>Yesterday</td><td>18h</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">DRL-07821</code></td><td>Overdue service — 560 hours past scheduled interval</td><td>HQ Randburg</td><td>Yesterday</td><td>16h</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">PMP-00732</code></td><td>Pressure high — 198 bar vs. rated 200 bar max</td><td>Driefontein</td><td>Yesterday</td><td>14h</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">DRL-05234</code></td><td>Elevated temperature — 83 °C, warning threshold at 85 °C</td><td>Tau Tona</td><td>Yesterday</td><td>12h</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">THL-00341</code></td><td>Vibration RMS increasing — 2.1 g, deviation from commissioning baseline</td><td>South Deep</td><td>Yesterday</td><td>10h</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">DRL-02156</code></td><td>Low battery — 15% remaining, recommend surface recall</td><td>Kloof</td><td>Yesterday</td><td>9h</td></tr>
+          <tr><td><span class="pill p-warn">WARNING</span></td><td><code style="font-weight:700;font-size:13px;">PMP-00621</code></td><td>Signature drift — 8% deviation from commissioning baseline</td><td>Kusasalethu</td><td>Yesterday</td><td>7h</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SCREEN 6: Assets list ─── -->
+<section id="screen-6" class="screen">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 24px 40px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <h1 style="font-size:24px;font-weight:700;color:#111827;margin:0;">Assets</h1>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="position:relative;">
+          <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;"></i>
+          <input type="text" placeholder="Search assets..." style="padding:8px 12px 8px 32px;border:1px solid #D1D5DB;border-radius:6px;font-size:13px;width:220px;">
+        </div>
+        <select style="padding:8px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:13px;color:#374151;">
+          <option>All types</option><option>Drills</option><option>Pumps</option><option>Thrust legs</option>
+        </select>
+        <select style="padding:8px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:13px;color:#374151;">
+          <option>All sites</option><option>Mponeng</option><option>Tau Tona</option><option>Driefontein</option><option>Kusasalethu</option><option>Kloof</option><option>South Deep</option>
+        </select>
+        <select style="padding:8px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:13px;color:#374151;">
+          <option>All statuses</option><option>Active</option><option>Alarm</option><option>Warning</option><option>Maintenance</option>
+        </select>
+        <button class="btn-pri" style="display:flex;align-items:center;gap:6px;">
+          <i data-lucide="download" style="width:14px;height:14px;"></i>Export to Excel
+        </button>
+      </div>
+    </div>
+    <div class="card" style="overflow:hidden;">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width:40px;"><input type="checkbox" style="width:14px;height:14px;"></th>
+            <th>Asset ID</th><th>Type</th><th>Model</th><th>Current location</th><th>Status</th><th>Last seen</th><th>Lifetime hours</th><th>Battery</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="hotspot" data-target="4"><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">DRL-04217</code></td><td>Drill</td><td>RD-9000</td><td>Tau Tona UG</td><td><span class="pill" style="background:#FEE2E2;color:#991B1B;">Alarm</span></td><td>2m ago</td><td>2,847</td><td>62%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">PMP-00184</code></td><td>Pump</td><td>HP-5000</td><td>Mponeng workshop</td><td><span class="pill" style="background:#FEF3C7;color:#92400E;">Warning</span></td><td>5m ago</td><td>4,231</td><td>78%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">DRL-08812</code></td><td>Drill</td><td>RD-9000</td><td>Driefontein UG</td><td><span class="pill" style="background:#FEE2E2;color:#991B1B;">Alarm</span></td><td>Unknown</td><td>1,892</td><td>—</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">THL-00341</code></td><td>Thrust leg</td><td>TL-3000</td><td>South Deep workshop</td><td><span class="pill p-ok">Active</span></td><td>1m ago</td><td>3,421</td><td>91%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">DRL-02156</code></td><td>Drill</td><td>RD-8500</td><td>Kloof UG</td><td><span class="pill p-ok">Active</span></td><td>3m ago</td><td>5,632</td><td>45%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">PMP-00521</code></td><td>Pump</td><td>HP-6000</td><td>Kusasalethu UG</td><td><span class="pill p-ok">Active</span></td><td>1m ago</td><td>2,109</td><td>83%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">DRL-07821</code></td><td>Drill</td><td>RD-9000</td><td>HQ Randburg</td><td><span class="pill p-maint">Maintenance</span></td><td>12m ago</td><td>4,567</td><td>67%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">THL-00892</code></td><td>Thrust leg</td><td>TL-3500</td><td>Mponeng UG</td><td><span class="pill p-ok">Active</span></td><td>2m ago</td><td>2,834</td><td>72%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">DRL-05234</code></td><td>Drill</td><td>RD-9000</td><td>Tau Tona workshop</td><td><span class="pill p-ok">Active</span></td><td>8m ago</td><td>1,256</td><td>88%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">PMP-00732</code></td><td>Pump</td><td>HP-5000</td><td>Driefontein workshop</td><td><span class="pill p-ok">Active</span></td><td>4m ago</td><td>3,892</td><td>54%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">DRL-09456</code></td><td>Drill</td><td>RD-8500</td><td>South Deep UG</td><td><span class="pill p-ok">Active</span></td><td>1m ago</td><td>4,123</td><td>76%</td></tr>
+          <tr><td><input type="checkbox" style="width:14px;height:14px;"></td><td><code style="font-weight:700;font-size:13px;">THL-00123</code></td><td>Thrust leg</td><td>TL-3000</td><td>Kloof UG</td><td><span class="pill p-ok">Active</span></td><td>6m ago</td><td>2,945</td><td>81%</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:12px 16px;background:#F9FAFB;border-top:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:13px;color:#6B7280;">Showing 1–12 of 7,482</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-out" style="padding:5px 12px;font-size:12px;" disabled>Previous</button>
+          <button class="btn-out" style="padding:5px 12px;font-size:12px;">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SCREEN 7: Pump signature separation ─── -->
+<section id="screen-7" class="screen">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 24px 40px;">
+    <!-- Breadcrumb -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;font-size:13px;">
+      <span class="hotspot" data-target="6" style="color:#3B82F6;cursor:pointer;">Assets</span>
+      <i data-lucide="chevron-right" style="width:14px;height:14px;color:#9CA3AF;"></i>
+      <span class="hotspot" data-target="4" style="color:#3B82F6;cursor:pointer;">DRL-04217</span>
+      <i data-lucide="chevron-right" style="width:14px;height:14px;color:#9CA3AF;"></i>
+      <span style="color:#374151;font-weight:500;">Vibration analysis</span>
+    </div>
+
+    <div class="card" style="padding:32px;">
+      <div style="margin-bottom:28px;">
+        <h1 style="font-size:22px;font-weight:700;color:#111827;margin:0 0 6px;">Pump signature separation</h1>
+        <p style="font-size:14px;color:#6B7280;margin:0;">How we tell adjacent pumps apart on a shared power-pack frame.</p>
+      </div>
+
+      <!-- Pump diagram -->
+      <div style="margin-bottom:28px;">
+        <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Physical setup</div>
+        <div style="background:#F8FAFC;border-radius:8px;border:1px solid #E5E7EB;overflow:hidden;">
+          <svg viewBox="0 0 760 200" style="width:100%;display:block;">
+            <!-- Steel frame -->
+            <rect x="20" y="155" width="720" height="22" rx="3" fill="#64748B"/>
+            <text x="380" y="169" text-anchor="middle" fill="white" font-size="11" font-weight="600">Steel power-pack frame</text>
+            <!-- Cross-talk arc -->
+            <path d="M 285 120 Q 380 50 475 120" stroke="#EF4444" stroke-width="2" stroke-dasharray="6,4" fill="none"/>
+            <text x="380" y="46" text-anchor="middle" fill="#EF4444" font-size="11" font-weight="500">Cross-talk through frame</text>
+            <!-- Pump A -->
+            <rect x="60" y="88" width="220" height="70" rx="8" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2"/>
+            <text x="170" y="114" text-anchor="middle" fill="#1E40AF" font-size="13" font-weight="700">Pump A — Target</text>
+            <text x="170" y="132" text-anchor="middle" fill="#3B82F6" font-size="12">Running 49 Hz</text>
+            <!-- Accelerometer dot -->
+            <circle cx="240" cy="100" r="7" fill="#3B82F6" stroke="white" stroke-width="2"/>
+            <text x="255" y="95" fill="#374151" font-size="10">accelerometer</text>
+            <!-- Pump B -->
+            <rect x="480" y="88" width="220" height="70" rx="8" fill="#FFF7ED" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="5,3"/>
+            <text x="590" y="114" text-anchor="middle" fill="#92400E" font-size="13" font-weight="700">Pump B — Adjacent</text>
+            <text x="590" y="132" text-anchor="middle" fill="#D97706" font-size="12">Running 47 Hz</text>
+          </svg>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 240px;gap:24px;">
+        <div>
+          <!-- FFT before filtering -->
+          <div style="margin-bottom:20px;">
+            <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">FFT spectrum — before filtering</div>
+            <div style="background:#F8FAFC;border-radius:8px;border:1px solid #E5E7EB;overflow:hidden;">
+              <svg viewBox="0 0 600 180" style="width:100%;display:block;">
+                <line x1="45" y1="150" x2="575" y2="150" stroke="#E5E7EB" stroke-width="2"/>
+                <line x1="45" y1="150" x2="45" y2="20" stroke="#E5E7EB" stroke-width="2"/>
+                <!-- Y axis labels -->
+                <text x="38" y="24" text-anchor="end" fill="#9CA3AF" font-size="9">High</text>
+                <text x="38" y="154" text-anchor="end" fill="#9CA3AF" font-size="9">0</text>
+                <text x="22" y="90" fill="#9CA3AF" font-size="9" transform="rotate(-90,22,90)">Amplitude</text>
+                <!-- Pump B spike (47Hz) -->
+                <rect x="148" y="82" width="24" height="68" fill="#F59E0B" opacity=".7"/>
+                <text x="160" y="164" text-anchor="middle" fill="#D97706" font-size="10" font-weight="600">47 Hz</text>
+                <!-- Pump A spike (49Hz) — taller, blue -->
+                <rect x="183" y="35" width="28" height="115" fill="#3B82F6"/>
+                <text x="197" y="164" text-anchor="middle" fill="#1E40AF" font-size="10" font-weight="700">49 Hz</text>
+                <!-- Harmonics -->
+                <rect x="340" y="105" width="18" height="45" fill="#3B82F6" opacity=".45"/>
+                <text x="349" y="164" text-anchor="middle" fill="#6B7280" font-size="9">~98 Hz</text>
+                <rect x="490" y="122" width="14" height="28" fill="#3B82F6" opacity=".25"/>
+                <text x="497" y="164" text-anchor="middle" fill="#6B7280" font-size="9">~147 Hz</text>
+                <!-- Filter window (green) -->
+                <rect x="175" y="22" width="50" height="136" fill="none" stroke="#10B981" stroke-width="2" stroke-dasharray="4,3" rx="2"/>
+                <text x="200" y="17" text-anchor="middle" fill="#10B981" font-size="9" font-weight="600">Narrow-band filter</text>
+                <text x="575" y="162" fill="#9CA3AF" font-size="9">Hz</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- FFT after filtering -->
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">After filtering — Pump A isolated</div>
+            <div style="background:#F0FDF4;border-radius:8px;border:1px solid #BBF7D0;overflow:hidden;">
+              <svg viewBox="0 0 600 130" style="width:100%;display:block;">
+                <line x1="45" y1="108" x2="575" y2="108" stroke="#D1FAE5" stroke-width="2"/>
+                <line x1="45" y1="108" x2="45" y2="20" stroke="#D1FAE5" stroke-width="2"/>
+                <rect x="183" y="22" width="28" height="86" fill="#3B82F6"/>
+                <text x="197" y="122" text-anchor="middle" fill="#1E40AF" font-size="10" font-weight="700">49 Hz</text>
+                <rect x="340" y="70" width="18" height="38" fill="#3B82F6" opacity=".45"/>
+                <text x="349" y="122" text-anchor="middle" fill="#6B7280" font-size="9">~98 Hz</text>
+                <rect x="490" y="88" width="14" height="20" fill="#3B82F6" opacity=".25"/>
+                <text x="497" y="122" text-anchor="middle" fill="#6B7280" font-size="9">~147 Hz</text>
+                <text x="575" y="120" fill="#9CA3AF" font-size="9">Hz</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls sidebar -->
+        <div>
+          <div class="card" style="padding:16px;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:14px;">Signal processing controls</div>
+            <div style="margin-bottom:14px;">
+              <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:6px;">Frequency separation</label>
+              <input type="range" min="0" max="10" value="2" class="hotspot" data-target="7" style="width:100%;accent-color:#1F4E78;">
+              <div style="font-size:11px;color:#6B7280;margin-top:4px;">2 Hz</div>
+            </div>
+            <div style="margin-bottom:14px;">
+              <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:6px;">Cross-talk strength</label>
+              <input type="range" min="0" max="100" value="30" class="hotspot" data-target="7" style="width:100%;accent-color:#1F4E78;">
+              <div style="font-size:11px;color:#6B7280;margin-top:4px;">30%</div>
+            </div>
+            <div>
+              <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:6px;">Calibration baseline</label>
+              <select class="hotspot" data-target="7" style="width:100%;padding:6px 8px;border:1px solid #D1D5DB;border-radius:5px;font-size:12px;color:#374151;">
+                <option>Fresh — captured at commissioning</option>
+                <option>90-day rolling average</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="padding:14px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+              <i data-lucide="check-circle" style="width:15px;height:15px;color:#16A34A;flex-shrink:0;"></i>
+              <span style="font-size:13px;font-weight:700;color:#15803D;">Separation: confident (92%)</span>
+            </div>
+            <p style="font-size:12px;color:#166534;line-height:1.55;margin:0;">Pump A signature isolated with 4% residual cross-talk. Operating hours and vibration severity attributable to Pump A only.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SCREEN 8: Reports ─── -->
+<section id="screen-8" class="screen">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 24px 40px;">
+    <h1 style="font-size:24px;font-weight:700;color:#111827;margin:0 0 24px;">Reports</h1>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
+      <div class="card hotspot" data-target="2" style="padding:24px;transition:box-shadow .15s;">
+        <div style="width:40px;height:40px;background:#EFF6FF;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <i data-lucide="bar-chart-2" style="color:#1F4E78;width:20px;height:20px;"></i>
+        </div>
+        <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:6px;">Asset utilisation by site</div>
+        <p style="font-size:13px;color:#6B7280;margin:0 0 16px;line-height:1.5;">Drill and pump operating hours compared across all six mines, with shift breakdowns.</p>
+        <button class="btn-pri" style="width:100%;padding:8px;">Run report</button>
+      </div>
+      <div class="card hotspot" data-target="2" style="padding:24px;">
+        <div style="width:40px;height:40px;background:#EFF6FF;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <i data-lucide="clock" style="color:#1F4E78;width:20px;height:20px;"></i>
+        </div>
+        <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:6px;">Time-in-shaft analysis</div>
+        <p style="font-size:13px;color:#6B7280;margin:0 0 16px;line-height:1.5;">Average underground hours by shaft with statistical outlier flagging and trend lines.</p>
+        <button class="btn-pri" style="width:100%;padding:8px;">Run report</button>
+      </div>
+      <div class="card hotspot" data-target="2" style="padding:24px;">
+        <div style="width:40px;height:40px;background:#EFF6FF;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <i data-lucide="wrench" style="color:#1F4E78;width:20px;height:20px;"></i>
+        </div>
+        <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:6px;">Maintenance forecast</div>
+        <p style="font-size:13px;color:#6B7280;margin:0 0 16px;line-height:1.5;">Assets approaching service intervals or showing early wear signatures in sensor data.</p>
+        <button class="btn-pri" style="width:100%;padding:8px;">Run report</button>
+      </div>
+      <div class="card hotspot" data-target="2" style="padding:24px;">
+        <div style="width:40px;height:40px;background:#EFF6FF;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <i data-lucide="git-branch" style="color:#1F4E78;width:20px;height:20px;"></i>
+        </div>
+        <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:6px;">Movement event log</div>
+        <p style="font-size:13px;color:#6B7280;margin:0 0 16px;line-height:1.5;">Full audit trail of all seven status transitions per asset, exportable for SQL Server.</p>
+        <button class="btn-pri" style="width:100%;padding:8px;">Run report</button>
+      </div>
+      <div class="card hotspot" data-target="2" style="padding:24px;">
+        <div style="width:40px;height:40px;background:#EFF6FF;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <i data-lucide="activity" style="color:#1F4E78;width:20px;height:20px;"></i>
+        </div>
+        <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:6px;">Condition monitoring trends</div>
+        <p style="font-size:13px;color:#6B7280;margin:0 0 16px;line-height:1.5;">Vibration and temperature trends by asset type, with threshold exceedance history.</p>
+        <button class="btn-pri" style="width:100%;padding:8px;">Run report</button>
+      </div>
+      <div class="card hotspot" data-target="2" style="padding:24px;">
+        <div style="width:40px;height:40px;background:#EFF6FF;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+          <i data-lucide="battery-charging" style="color:#1F4E78;width:20px;height:20px;"></i>
+        </div>
+        <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:6px;">Battery and tag health</div>
+        <p style="font-size:13px;color:#6B7280;margin:0 0 16px;line-height:1.5;">Replacement scheduling for Phase 2 condition-monitoring sensor tags across the fleet.</p>
+        <button class="btn-pri" style="width:100%;padding:8px;">Run report</button>
+      </div>
+    </div>
+    <div class="card" style="padding:20px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:4px;">Custom report</div>
+        <p style="font-size:13px;color:#6B7280;margin:0;">Build your own queries with direct access to HPE's Microsoft SQL Server.</p>
+      </div>
+      <button class="btn-out" style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+        <i data-lucide="database" style="width:14px;height:14px;"></i>
+        Build via SQL Studio
+        <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SCREEN 9: Work order success ─── -->
+<section id="screen-9" class="screen">
+  <div style="min-height:calc(100vh - 96px);display:flex;align-items:center;justify-content:center;padding:24px;">
+    <div class="card" style="width:100%;max-width:600px;padding:48px 40px;box-shadow:0 8px 40px rgba(0,0,0,.08);">
+      <div style="text-align:center;margin-bottom:32px;">
+        <div style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;background:#D1FAE5;border-radius:50%;margin-bottom:20px;">
+          <i data-lucide="check-circle" style="color:#10B981;width:36px;height:36px;"></i>
+        </div>
+        <h1 style="font-size:24px;font-weight:700;color:#111827;margin:0 0 8px;">Work order WO-31247 created</h1>
+        <p style="font-size:15px;color:#6B7280;margin:0;">Assigned to Tau Tona workshop &middot; spare RD-9000 reserved in slot 14</p>
+      </div>
+
+      <div style="background:#F9FAFB;border-radius:8px;padding:20px;margin-bottom:28px;border:1px solid #E5E7EB;">
+        <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:14px;">Work order details</div>
+        <div class="kv"><span class="k">Work order</span><code class="v" style="font-size:13px;">WO-31247</code></div>
+        <div class="kv"><span class="k">Asset ID</span><code class="v" style="font-size:13px;">DRL-04217</code></div>
+        <div class="kv"><span class="k">Recall reason</span><span class="v">Critical vibration alarm — chuck bearing wear (4.2 g)</span></div>
+        <div class="kv"><span class="k">From location</span><span class="v">Tau Tona main decline</span></div>
+        <div class="kv"><span class="k">Assigned to</span><span class="v">Tau Tona workshop</span></div>
+        <div class="kv"><span class="k">Replacement unit</span><span class="v">RD-9000 spare, workshop slot 14</span></div>
+        <div class="kv"><span class="k">Priority</span><span class="v"><span class="pill p-crit" style="font-size:11px;">Critical</span></span></div>
+        <div class="kv"><span class="k">Estimated downtime</span><span class="v">2 hours</span></div>
+        <div class="kv" style="border-bottom:none;"><span class="k">Notified</span><span class="v">Tau Tona shift supervisor · HPE maintenance team</span></div>
+      </div>
+
+      <div style="display:flex;gap:12px;">
+        <div class="hotspot" data-target="2" style="flex:1;">
+          <button class="btn-out" style="width:100%;padding:11px;font-size:14px;">View work order</button>
+        </div>
+        <div class="hotspot" data-target="2" style="flex:1;">
+          <button class="btn-pri" style="width:100%;padding:11px;font-size:14px;">Back to overview</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- #app -->
+
+<script>
+// ═══════════════════════════════════════════════
+// Navigation & state
+// ═══════════════════════════════════════════════
+let cur = 1;
+let history = [1];
+let hsOn = false;
+const TOTAL = 9;
+const charts = {};
+
+const navMap = { 2:'ov', 3:'map', 5:'alarms', 6:'assets', 8:'reports', 9:'settings' };
+
+function go(n) {
+  n = Math.max(1, Math.min(TOTAL, n));
+  if (n === cur) return;
+  history.push(n);
+  cur = n;
+  window.location.hash = 'screen-' + n;
+  render();
+}
+
+function render() {
+  // Show/hide screens
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  const s = document.getElementById('screen-' + cur);
+  if (s) s.classList.add('active');
+
+  // Control bar
+  document.getElementById('ind').textContent = cur + ' of ' + TOTAL;
+  document.getElementById('btn-prev').disabled = (cur === 1);
+  document.getElementById('btn-next').disabled = (cur === TOTAL);
+
+  // Product nav visibility + active state
+  const pnav = document.getElementById('pnav');
+  if (cur === 1) {
+    pnav.style.display = 'none';
+  } else {
+    pnav.style.display = 'flex';
+    pnav.querySelectorAll('[data-nav]').forEach(el => {
+      el.classList.toggle('active-nav', el.dataset.nav === (navMap[cur] || '__none__'));
+    });
+  }
+
+  // Reinit Lucide icons for any newly-shown screen
+  if (window.lucide) lucide.createIcons();
+
+  // Init charts for the visible screen
+  initCharts(cur);
+}
+
+// ── Chart.js init ──
+const vibVals = [1.4,1.5,1.3,1.6,1.4,1.7,1.5,1.8,1.6,1.7,1.9,1.8,2.0,2.1,1.9,2.2,2.3,2.1,2.4,2.3,2.5,2.6,2.8,2.7,2.9,3.0,3.2,3.5,3.7,3.9,4.2];
+
+function initCharts(screen) {
+  if (screen === 2) {
+    initFleetChart();
+    initDutyChart();
+  }
+  if (screen === 4) {
+    initVibrationChart();
+  }
+}
+
+function initFleetChart() {
+  const el = document.getElementById('chart-fleet');
+  if (!el || charts.fleet) return;  // only create once
+  charts.fleet = new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: ['HQ workshop', 'In transit', 'Mine workshops', 'Underground'],
+      datasets: [{
+        data: [684, 231, 2094, 4473],
+        backgroundColor: ['#93C5FD','#60A5FA','#3B82F6','#1F4E78'],
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      animation: false,
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.raw.toLocaleString() + ' assets' } } },
+      scales: {
+        x: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 11 }, color: '#6B7280' } },
+        y: { grid: { display: false }, ticks: { font: { size: 12 }, color: '#374151' } }
+      }
+    }
+  });
+}
+
+function initDutyChart() {
+  const el = document.getElementById('chart-duty');
+  if (!el || charts.duty) return;  // only create once
+  charts.duty = new Chart(el, {
+    type: 'line',
+    data: {
+      labels: ['00:00','02:00','04:00','06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00'],
+      datasets: [{
+        data: [420,380,450,2840,3100,2650,1850,3200,2980,1420,680,520],
+        borderColor: '#1F4E78',
+        backgroundColor: 'rgba(31,78,120,.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointBackgroundColor: '#1F4E78',
+      }]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.raw.toLocaleString() + ' drilling' } } },
+      scales: {
+        x: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, color: '#6B7280', maxRotation: 0 } },
+        y: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 11 }, color: '#6B7280' }, min: 0 }
+      }
+    }
+  });
+}
+
+function initVibrationChart() {
+  const el = document.getElementById('chart-vibration');
+  if (!el || charts.vibration) return;  // only create once
+  const labels = vibVals.map((_, i) => i === 30 ? 'Today' : i === 0 ? '30d ago' : i % 5 === 0 ? (30-i)+'d' : '');
+  charts.vibration = new Chart(el, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Vibration RMS (g)',
+        data: vibVals,
+        borderColor: '#1F4E78',
+        backgroundColor: 'rgba(31,78,120,.06)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 0,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + ctx.raw.toFixed(1) + ' g' } },
+        annotation: undefined
+      },
+      scales: {
+        x: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, color: '#6B7280' } },
+        y: {
+          grid: { color: '#F3F4F6' },
+          ticks: { font: { size: 11 }, color: '#6B7280', callback: v => v + ' g' },
+          min: 0, max: 5
+        }
+      }
+    },
+    plugins: [{
+      id: 'thresholds',
+      afterDraw(chart) {
+        const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+        const drawLine = (val, color, label) => {
+          const yPos = y.getPixelForValue(val);
+          ctx.save();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath(); ctx.moveTo(left, yPos); ctx.lineTo(right, yPos); ctx.stroke();
+          ctx.fillStyle = color;
+          ctx.font = '10px system-ui';
+          ctx.fillText(label, right - 70, yPos - 4);
+          ctx.restore();
+        };
+        drawLine(2.5, '#F59E0B', 'Warning 2.5 g');
+        drawLine(3.5, '#EF4444', 'Alarm 3.5 g');
+      }
+    }]
+  });
+}
+
+// ── Hotspot toggle ──
+function toggleHS() {
+  hsOn = !hsOn;
+  document.body.classList.toggle('show-hotspots', hsOn);
+  document.getElementById('btn-hs').textContent = (hsOn ? 'Hide' : 'Show') + ' hotspots (H)';
+}
+
+// ── Global click handler ──
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-target]');
+  if (el) {
+    e.preventDefault();
+    e.stopPropagation();
+    go(Number(el.dataset.target));
+  }
+});
+
+// ── Hash routing ──
+window.addEventListener('hashchange', () => {
+  const m = window.location.hash.match(/screen-(\d)/);
+  if (m) {
+    const n = Number(m[1]);
+    if (n >= 1 && n <= TOTAL && n !== cur) { cur = n; render(); }
+  }
+});
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'h' || e.key === 'H') toggleHS();
+  else if (e.key === 'r' || e.key === 'R') go(1);
+  else if (e.key === 'ArrowLeft') go(cur - 1);
+  else if (e.key === 'ArrowRight') go(cur + 1);
+  else if (e.key >= '1' && e.key <= '9') go(Number(e.key));
+});
+
+// ── Boot ──
+window.addEventListener('DOMContentLoaded', () => {
+  const m = window.location.hash.match(/screen-(\d)/);
+  if (m) cur = Math.max(1, Math.min(TOTAL, Number(m[1])));
+  render();
+});
+</script>
+</body>
+</html>

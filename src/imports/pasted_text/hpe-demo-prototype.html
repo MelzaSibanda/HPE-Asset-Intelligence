@@ -1,0 +1,188 @@
+# Build an interactive Figma-style clickable demo prototype
+
+## What to produce
+
+A single self-contained `hpe_demo_prototype.html` file in the current directory. When opened in a browser, it shows a **clickable prototype** of an RFID asset tracking and condition monitoring product. The user navigates by clicking hotspots on the screens — just like a Figma prototype.
+
+This is for a sales demo with a prospect called HPE (Hydropower Equipment, a South African mining equipment supplier). I'll click through it live with them in the room, then record a walkthrough afterwards.
+
+## Hard requirements
+
+* **Single HTML file**. No build step, no npm, no frameworks. Vanilla HTML + CSS + JS. Tailwind via CDN is OK. Lucide icons via CDN is OK.
+* **Opens directly** by double-clicking the file. No server needed.
+* **Designed for 1440×900** viewport but responsive down to 1280×800.
+* **Click navigation only**, no auto-advance. The user controls the pace.
+* **Hotspots are visible on hover** — a subtle blue outline appears around clickable regions so I can see what's interactive (toggle this on/off with the `H` key).
+* **Browser-back support** — clicking the back arrow returns to the previous screen via the URL hash (`#screen-1`, `#screen-2`, etc).
+* **Persistent top bar** with: prototype name, current screen indicator (e.g., "3 of 9"), restart button, prev/next arrows.
+* **Smooth screen transitions** — 200ms cross-fade between screens.
+
+## Visual style
+
+* Clean, flat, modern SaaS aesthetic. Think Linear, Vercel dashboard, Stripe.
+* Light mode. White surfaces, subtle borders (`#E5E7EB`), generous whitespace.
+* Primary accent `#1F4E78` (deep blue). Success `#10B981`. Warning `#F59E0B`. Danger `#EF4444`.
+* Sans-serif system stack: `-apple-system, "Segoe UI", Roboto, sans-serif`.
+* No emojis. Use Lucide icons via CDN.
+* Realistic-looking data everywhere. No "Lorem ipsum", no placeholder names. Use real SA mine names (Mponeng, Tau Tona, Driefontein, Kusasalethu, Kloof, South Deep) and asset IDs like DRL-04217, PMP-00184.
+
+## Context for the product being demoed
+
+The product is an RFID asset tracking + condition monitoring system for mining equipment. The buyer (HPE) wants to track 7,000–10,000 hydro-powered rock drills and thrust legs through 7 movement events (Dispatched HQ → In transit → Received at mine → Dispatched UG → Returned from UG → Dispatched to HQ → Received at HQ), with data flowing into their Microsoft SQL Server. Phase 2 adds vibration + temperature sensors that must distinguish adjacent pumps shaking the same frame. Tags fit a 20mm × 80mm cavity in plastic drill handles, IP68, 500 g shock, 120 °C, 3–5 year battery.
+
+## The 9 screens
+
+Each screen is a full-viewport "page". Click flows are specified at the end of each screen description.
+
+### Screen 1 — Login
+
+Centered card on a light grey background. Product logo "HPE Asset Intelligence" with a small RFID icon. Email field pre-filled with `werner.nienaber@hpesa.com`. Password field with dots. "Sign in" button (deep blue). Below: small text "Single sign-on via HPE Active Directory".
+
+**Hotspot:** Sign-in button → Screen 2
+
+### Screen 2 — Dashboard overview
+
+Top nav with logo on left, then nav items: Overview (active), Live map, Alarms, Assets, Reports, Settings. User avatar "WN" on right.
+
+Main area:
+* Greeting: "Good morning, Werner" with date "Monday, 11 May 2026 · 09:42 SAST"
+* 4 KPI cards in a row: Tagged assets 7,482 / of 7,500 deployed · In service today 6,914 / 92.4% utilisation · Active alarms 17 (red, "4 critical · 13 warning") · Avg drill duty 24h 3.8 h / within spec
+* Two-column section below:
+  - **Left card** "Fleet location" — horizontal bar chart: HQ workshop 684, In transit 231, Mine workshops 2,094, Underground 4,473
+  - **Right card** "Drill duty profile, last 24 hours" — a simple SVG line chart showing two peaks at 06:00 and 14:00 shift changes, currently at 3,142 drilling
+* Below that: "Active alarms" card showing 5 alarm rows with severity pills, asset IDs (DRL-04217, PMP-00184, DRL-08812, DRL-04590, PMP-00097), descriptions, locations, and timestamps. The first row (DRL-04217 critical) has a "View" button.
+
+**Hotspots:**
+* "Live map" nav item → Screen 3
+* "Alarms" nav item → Screen 5
+* DRL-04217 alarm row "View" button → Screen 4
+* "Assets" nav item → Screen 6
+
+### Screen 3 — Live map
+
+Same top nav, "Live map" active.
+
+Main area is a stylised map of Gauteng/Free State (just a light grey background with subtle province outlines as SVG paths). Six circular site markers sized by asset count (Mponeng 1,612, Tau Tona 1,184, Driefontein 986, Kusasalethu 804, Kloof 703, South Deep 1,278) and one blue HQ marker for Randburg (684). Three sites have small red dot overlays indicating active critical alarms.
+
+Right sidebar shows filters: Asset type (All / Drills / Pumps / Thrust legs), Status (All / In service / In transit / Underground / In workshop), and a "With active alarms only" toggle.
+
+Below the map: an "Underground time-in-shaft heat map" with 7 horizontal bars (Mponeng 4-shaft 14.2 h/day, Mponeng 1-shaft 12.6, Tau Tona main decline 11.5, South Deep twin 10.2, Driefontein 5-shaft 9.0, Kusasalethu main 7.7, Kloof 7-shaft 6.0).
+
+**Hotspots:**
+* Click on the Tau Tona marker → Screen 4
+* "Overview" nav → Screen 2
+
+### Screen 4 — Asset detail (DRL-04217)
+
+Same top nav. Breadcrumb: Assets / DRL-04217.
+
+Header: Asset ID "DRL-04217" with red "Critical alarm" pill and blue "Underground" pill. Subtitle: "Hydro rock drill · HPE model RD-9000 · serial RD9-2024-04217 · Tau Tona main decline". Buttons on right: "Acknowledge alarm" (outline) and "Create work order" (primary).
+
+5 KPI mini-cards: Lifetime hours 2,847, Hours this month 112, Vibration RMS 4.2 g (red), Temperature 87 °C, Battery 62%.
+
+Two columns:
+* **Left (wider)** "Vibration trace, last 30 days" — SVG line chart with y-axis 0–4 g, x-axis 30d ago to today. Two dashed horizontal threshold lines at 2.5 g (orange "warning") and 3.5 g (red "alarm"). The line starts at ~1.4 g and trends upward to 4.2 g today, crossing warning at day 25 and alarm at day 30.
+* **Right** "Asset registry" — table of fields: Asset ID, EPC tag (mono font), Type, Model, Commissioned 14 Mar 2024, Tagged 22 Mar 2024, Current site Tau Tona, Last service 8 Apr 2026 (33d ago), Next due "overdue" in red.
+
+Below: two columns again:
+* **Left** "Lifecycle timeline · last 14 days" — vertical timeline with 8 events, each with timestamp, pill, and description. Include: critical alarm raised today 09:33, warning raised 6 May, Dispatched UG 5 May, Returned from UG 4 May, Dispatched UG 4 May, Received at mine 2 May, Dispatched HQ→mine 28 Apr, Service complete 8 Apr.
+* **Right** "Diagnostic snapshot" — table of latest sensor values, plus a red callout box: "Recommended action: Recall to surface this shift. Vibration signature and frequency shift consistent with chuck bearing wear. Spare RD-9000 available at Tau Tona workshop, slot 14."
+
+**Hotspots:**
+* "Acknowledge alarm" → Screen 5
+* "Create work order" → Screen 9
+* Vibration chart area → Screen 7 (the pump signature deep-dive, framed as "drill into the physics")
+* Breadcrumb "Assets" → Screen 6
+
+### Screen 5 — Alarms list
+
+Same top nav, "Alarms" active.
+
+Header: "Active alarms (17)" with filter chips: All / Critical (4) / Warning (13) / Info / Acknowledged.
+
+Table of 17 rows with columns: Severity pill, Asset ID, Description, Site, Raised, Age. Critical rows have a subtle red left border. Show realistic descriptions covering vibration, temperature, missing heartbeat, low battery, signature drift, out-of-sequence movement.
+
+**Hotspots:**
+* First row (DRL-04217) → Screen 4
+* "Overview" nav → Screen 2
+
+### Screen 6 — Assets list
+
+Same top nav, "Assets" active.
+
+Header: "Assets" with search box, filters (Type, Site, Status), and "Export to Excel" button. Below: a paginated table showing 12 rows. Columns: Checkbox, Asset ID, Type, Model, Current location, Status pill, Last seen, Lifetime hours, Battery %. Show realistic mix of drills, thrust legs, and pumps across the six mines. Pagination shows "1–12 of 7,482".
+
+**Hotspots:**
+* DRL-04217 row → Screen 4
+* "Reports" nav → Screen 8
+
+### Screen 7 — Pump signature separation (the physics)
+
+Same top nav. Breadcrumb: Assets / DRL-04217 / Vibration analysis.
+
+Top section: title "Pump signature separation" and subtitle "How we tell adjacent pumps apart on a shared power-pack frame."
+
+Diagram: two pumps side by side (rounded rects) on a steel frame at the bottom. A red dashed curve labelled "Cross-talk through frame" connects them. Pump A is labelled "Target · running 49 Hz" with a small accelerometer dot. Pump B is labelled "Adjacent · 47 Hz".
+
+Below: an FFT spectrum chart showing two main spikes (49 Hz blue tall, 47 Hz red shorter), harmonics at ~98 and ~147 Hz, and a "narrow-band filter window" rectangle outlined in green around the 49 Hz spike.
+
+Below that: a smaller "after filtering" spectrum showing only the blue Pump A spikes remaining.
+
+Sidebar on the right with controls (these are decorative for the prototype, no need to fully wire up — but each "control" should have a hotspot that just stays on this screen):
+* Frequency separation: slider showing 2 Hz
+* Cross-talk strength: slider showing 30%
+* Calibration baseline: dropdown showing "Fresh — captured at commissioning"
+
+Green verdict box at the bottom: "Separation: confident (92%). Pump A signature isolated with 4% residual cross-talk. Operating hours and vibration severity attributable to Pump A only."
+
+**Hotspots:**
+* Breadcrumb "DRL-04217" → Screen 4
+* "Overview" nav → Screen 2
+
+### Screen 8 — Reports
+
+Same top nav, "Reports" active.
+
+Grid of 6 report cards, each with an icon, title, description, and "Run" button:
+1. **Asset utilisation by site** — Drill and pump hours, comparison across all six mines.
+2. **Time-in-shaft analysis** — Average underground hours by shaft, with outlier flagging.
+3. **Maintenance forecast** — Assets approaching service intervals or showing wear signatures.
+4. **Movement event log** — Full audit of the seven status changes per asset.
+5. **Condition monitoring trends** — Vibration and temperature trends by asset type.
+6. **Battery and tag health** — Replacement scheduling for Phase 2 sensor tags.
+
+Below: a "Custom report" card with "Build via SQL Studio →" link, indicating the data is in HPE's own SQL Server.
+
+**Hotspots:**
+* Any report card → Screen 2 (the demo loops back)
+* "Settings" nav → Screen 9
+
+### Screen 9 — Work order created (success state)
+
+Centered card on light background. Green check icon. Title: "Work order WO-31247 created". Subtitle: "Assigned to Tau Tona workshop · spare RD-9000 reserved in slot 14".
+
+Below: a summary panel showing the work order details (asset DRL-04217, recall reason, recommended spares, estimated downtime 2 hours).
+
+Two buttons: "View work order" (outline) and "Back to overview" (primary).
+
+**Hotspots:**
+* "Back to overview" → Screen 2
+* "View work order" → Screen 2 (looping back, since this is a prototype)
+
+## Implementation notes
+
+* Use a single `<div id="app">` and render screens by toggling a `data-screen` attribute. Each screen is a hidden `<section>` that becomes visible when its number matches the current screen.
+* Hash routing: `window.location.hash = '#screen-N'` on navigation. Listen to `hashchange` to update.
+* Hotspots: any clickable region gets `class="hotspot"` and a `data-target="N"` attribute. Add a global click listener that intercepts these and routes via hash. When `H` is pressed (or a toggle button in the control bar is clicked), add a `.show-hotspots` class to the body that adds a `outline: 2px dashed #3B82F6; outline-offset: 4px` style to `.hotspot` elements.
+* Use real Lucide icons via `https://unpkg.com/lucide@latest`. Initialize with `lucide.createIcons()` after each screen change.
+* Use Chart.js via CDN for the line and bar charts (`https://cdn.jsdelivr.net/npm/chart.js`). Re-render charts when their screen becomes active.
+* For the map (Screen 3) and pump diagram (Screen 7), hand-write inline SVG — no external map libraries.
+* Keep the whole file under ~2500 lines. If you find yourself going over, simplify ornamental details, not navigation logic.
+* At the very top of the file, include a short comment block: filename, purpose, key keyboard shortcuts (`H` toggle hotspots, `←`/`→` prev/next screen, `R` restart, `1`–`9` jump to screen).
+
+## Quality bar
+
+* Every screen must look like a real product, not a wireframe.
+* Numbers must be consistent across screens (e.g., DRL-04217's RMS is 4.2 g everywhere it appears).
+* No console errors when navigating between any two screens in any order.
+* The flow must be demonstrable in 3–5 minutes by clicking: Login → Dashboard → Map → click Tau Tona → Asset detail → click vibration chart → Pump physics → back → Acknowledge alarm → Alarms list → Reports → Work order success.

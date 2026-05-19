@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(start \"\" \"c:\\\\Users\\\\USER\\\\Downloads\\\\Complete current task\\\\hpe_demo_prototype.html\")",
+      "Bash(npm run *)",
+      "Bash(\"/c/xampp/mysql/bin/mysql\" -u root -e \"CREATE DATABASE IF NOT EXISTS hpe_asset_intelligence CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
+      "Bash(\"/c/xampp/mysql/bin/mysql\" -u root hpe_asset_intelligence)",
+      "Bash(echo \"Import exit: $?\")",
+      "Bash(\"/c/xampp/mysql/bin/mysql\" -u root -e \"DROP DATABASE IF EXISTS hpe_asset_intelligence; CREATE DATABASE hpe_asset_intelligence CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
+      "Bash(/c/xampp/mysql/bin/mysql -u root -e ' *)",
+      "Bash(/c/xampp/mysql/bin/mysql -u root hpe_asset_intelligence -e ' *)"
+    ]
+  }
+}

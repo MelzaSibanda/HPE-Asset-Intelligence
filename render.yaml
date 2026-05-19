@@ -1,0 +1,44 @@
+services:
+  # ── PHP / CodeIgniter 4 API ────────────────────────────────────────────────
+  - type: web
+    name: hpe-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./
+    plan: free
+    healthCheckPath: /api/auth/login
+    envVars:
+      - key: CI_ENVIRONMENT
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      # Set CORS_ORIGIN to the Render URL of the frontend after first deploy
+      - key: CORS_ORIGIN
+        sync: false
+      # MySQL connection — use an external provider (e.g. PlanetScale, Railway)
+      - key: DB_HOSTNAME
+        sync: false
+      - key: DB_DATABASE
+        value: hpe_asset_intelligence
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_PORT
+        value: 3306
+
+  # ── React / Vite frontend (static site) ───────────────────────────────────
+  - type: web
+    name: hpe-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    plan: free
+    envVars:
+      # Set this to the Render URL of hpe-backend after first deploy
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

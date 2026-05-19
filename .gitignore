@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output (Render builds this from source)
+dist/
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.production
+backend/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+
+# CodeIgniter writable directory
+backend/writable/
