@@ -1,0 +1,15 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # /api/* requests → CodeIgniter (index.php handles all API routing)
+    RewriteRule ^api(/.*)?$ index.php [L,QSA]
+
+    # Existing static files and directories → serve directly (JS, CSS, images)
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # All other paths → React SPA entry point
+    RewriteRule ^ index.html [L]
+</IfModule>

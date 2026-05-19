@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-export const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost/hpe-api/public/api';
+// Production default is /api (same-domain Railway deployment).
+// For local dev, set VITE_API_URL=http://localhost/hpe-api/public/api in .env.local
+export const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 const api = axios.create({
   baseURL: BASE_URL,

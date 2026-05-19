@@ -1,3 +1,13 @@
+# ── Stage 1: Build React/Vite frontend ────────────────────────────────────
+FROM node:20-slim AS frontend
+
+WORKDIR /build
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# ── Stage 2: PHP 8.1 + Apache runtime ─────────────────────────────────────
 FROM php:8.1-apache
 
 RUN apt-get update && apt-get install -y \
@@ -16,7 +26,13 @@ RUN composer create-project codeigniter4/appstarter . --no-dev --no-interaction
 # Overlay our custom application code
 COPY backend/app/ app/
 
-# Apache virtual-host (port injected at runtime by entrypoint)
+# Place the built React app inside CI4's public/ directory
+COPY --from=frontend /build/dist/ public/
+
+# Custom .htaccess: /api/* → PHP (CodeIgniter), everything else → React SPA
+COPY backend/public.htaccess public/.htaccess
+
+# Apache virtual-host (port is injected at runtime by entrypoint)
 COPY backend/apache.conf /etc/apache2/sites-available/000-default.conf
 
 RUN chown -R www-data:www-data writable
