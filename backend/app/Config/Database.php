@@ -13,30 +13,29 @@ class Database extends Config
     {
         parent::__construct();
 
-        // Render provides DATABASE_URL for PostgreSQL — parse it first
+        // Render injects DATABASE_URL for PostgreSQL — parse it here
         $url = env('DATABASE_URL', '');
         if ($url) {
             $p    = parse_url($url);
             $host = $p['host'] ?? 'localhost';
             $port = $p['port'] ?? 5432;
             $user = $p['user'] ?? '';
-            $pass = $p['pass'] ?? '';
-            $db   = ltrim($p['path'] ?? '/railway', '/');
+            $pass = isset($p['pass']) ? urldecode($p['pass']) : '';
+            $db   = ltrim($p['path'] ?? '/', '/');
         } else {
-            $host = env('database.default.hostname', 'localhost');
-            $port = (int) env('database.default.port', 5432);
-            $user = env('database.default.username', '');
-            $pass = env('database.default.password', '');
-            $db   = env('database.default.database', 'railway');
+            $host = env('DB_HOSTNAME', 'localhost');
+            $port = (int) env('DB_PORT', 5432);
+            $user = env('DB_USERNAME', '');
+            $pass = env('DB_PASSWORD', '');
+            $db   = env('DB_DATABASE', 'hpe_asset_intelligence');
         }
 
         $this->default = [
-            'DSN'      => "pgsql:host={$host};port={$port};dbname={$db}",
             'hostname' => $host,
             'username' => $user,
             'password' => $pass,
             'database' => $db,
-            'DBDriver' => 'PDO',
+            'DBDriver' => 'Postgre',
             'DBPrefix' => '',
             'pConnect' => false,
             'DBDebug'  => false,
@@ -47,10 +46,6 @@ class Database extends Config
             'strictOn' => false,
             'failover' => [],
             'port'     => (int) $port,
-            'options'  => [
-                \PDO::ATTR_TIMEOUT  => 10,
-                \PDO::ATTR_ERRMODE  => \PDO::ERRMODE_EXCEPTION,
-            ],
         ];
     }
 }
