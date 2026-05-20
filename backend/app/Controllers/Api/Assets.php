@@ -91,16 +91,16 @@ class Assets extends BaseApiController
                 'asset_id'        => $assetId,
                 'type_id'         => (int) $body['type_id'],
                 'model'           => $body['model'],
-                'serial_number'   => $body['serial_number']   ?: null,
-                'epc_tag'         => $body['epc_tag']         ?: null,
+                'serial_number'   => ($body['serial_number'] ?? '') ?: null,
+                'epc_tag'         => ($body['epc_tag']       ?? '') ?: null,
                 'current_site_id' => (int) $body['site_id'],
                 'status'          => $body['status']          ?? 'active',
                 'location_detail' => $body['location_detail'] ?? 'Workshop',
-                'commissioned_at' => $body['commissioned_at'] ?? date('Y-m-d'),
-                'tagged_at'       => $body['tagged_at']       ?: null,
+                'commissioned_at' => ($body['commissioned_at'] ?? '') ?: date('Y-m-d'),
+                'tagged_at'       => ($body['tagged_at']      ?? '') ?: null,
                 'lifetime_hours'  => 0,
                 'monthly_hours'   => 0,
-                'battery_pct'     => isset($body['battery_pct']) ? (int) $body['battery_pct'] : 100,
+                'battery_pct'     => (int) ($body['battery_pct'] ?? 100),
             ]);
         } catch (\Throwable $e) {
             return $this->bad('Could not save asset: ' . $e->getMessage());
