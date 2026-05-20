@@ -53,16 +53,29 @@ class Assets extends BaseApiController
 
     public function create()
     {
+        // Try JSON body first, fall back to raw input for debugging
         $body = $this->body();
 
-        // Basic presence / type validation (no is_unique — handled below)
-        if ($err = $this->validate2([
-            'asset_id' => 'required|min_length[3]|max_length[20]',
-            'type_id'  => 'required',
-            'model'    => 'required|max_length[50]',
-            'site_id'  => 'required',
-        ], $body)) {
-            return $err;
+        // If body is empty, try reading raw input directly
+        if (empty($body)) {
+            $raw  = file_get_contents('php://input');
+            $body = json_decode($raw, true) ?? [];
+        }
+
+        // Manual validation (avoids CI4 validation quirks with Postgre driver)
+        $errors = [];
+        if (empty($body['asset_id'])) $errors['asset_id'] = 'Asset ID is required';
+        if (empty($body['type_id']))  $errors['type_id']  = 'Type is required';
+        if (empty($body['model']))    $errors['model']    = 'Model is required';
+        if (empty($body['site_id']))  $errors['site_id']  = 'Site is required';
+
+        if ($errors) {
+            return $this->respond([
+                'status'        => 'error',
+                'message'       => 'Validation failed',
+                'errors'        => $errors,
+                'received_body' => $body,  // temporary debug field
+            ], 422);
         }
 
         $assetId = strtoupper(trim($body['asset_id']));
