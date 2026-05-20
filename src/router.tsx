@@ -15,6 +15,7 @@ import { WorkOrderSuccessPage }   from './pages/WorkOrderSuccessPage';
 // Lazy-loaded heavier pages
 import { MapPage }                from './pages/MapPage';
 import { VibrationAnalysisPage }  from './pages/VibrationAnalysisPage';
+import { AddAssetPage }           from './pages/AddAssetPage';
 
 /** Wraps protected routes — redirects to / if not authenticated */
 function ProtectedLayout() {
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
       { path: '/map',                                element: <MapPage /> },
       { path: '/alarms',                             element: <AlarmsPage /> },
       { path: '/assets',                             element: <AssetsPage /> },
+      { path: '/assets/new',                         element: <AddAssetPage /> },
       { path: '/assets/:assetId',                    element: <AssetDetailPage /> },
       { path: '/assets/:assetId/vibration',          element: <VibrationAnalysisPage /> },
       { path: '/reports',                            element: <ReportsPage /> },

@@ -44,6 +44,21 @@ export async function getAsset(assetId: string) {
   };
 }
 
+export async function createAsset(payload: Record<string, unknown>) {
+  const res = await api.post('/assets', payload);
+  return res.data.data;
+}
+
+export async function getAssetTypes() {
+  const res = await api.get('/settings/asset-types');
+  return res.data.data as { id: number; name: string; prefix: string }[];
+}
+
+export async function getSites() {
+  const res = await api.get('/settings/sites');
+  return res.data.data as { id: number; name: string; code: string; is_hq: number }[];
+}
+
 export async function getVibrationTrace(assetId: string, days = 30) {
   const res = await api.get(`/assets/${assetId}/vibration`, { params: { days } });
   return res.data.data as {

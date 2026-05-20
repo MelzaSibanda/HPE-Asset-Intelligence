@@ -33,7 +33,8 @@ class Assets extends BaseApiController
 
         $alarm = $this->db->query(
             "SELECT * FROM alarms WHERE asset_id = ? AND status = 'active'
-             ORDER BY FIELD(severity,'critical','warning','info'), raised_at DESC LIMIT 1",
+             ORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END,
+             raised_at DESC LIMIT 1",
             [$assetId]
         )->getRowArray();
 
