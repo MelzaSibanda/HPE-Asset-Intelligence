@@ -6,21 +6,22 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: ./
     plan: free
-    healthCheckPath: /api/auth/login
+    healthCheckPath: /
     envVars:
       - key: CI_ENVIRONMENT
         value: production
       - key: JWT_SECRET
-        generateValue: true
+        value: 816f7756cd38962fcf639278ae6f89c7bbaf9b0eb7c09276a00c38e261b64826
       - key: CORS_ORIGIN
         value: "*"
-      - key: DB_HOSTNAME
-        sync: false
-      - key: DB_DATABASE
-        value: hpe_asset_intelligence
-      - key: DB_USERNAME
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_PORT
-        value: 3306
+      # Automatically injected from the hpe-postgres database below
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hpe-postgres
+          property: connectionString
+
+databases:
+  - name: hpe-postgres
+    plan: free
+    databaseName: hpe_asset_intelligence
+    user: hpe_asset_intelligence_user
