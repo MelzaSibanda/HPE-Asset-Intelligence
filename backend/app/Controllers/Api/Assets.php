@@ -53,8 +53,11 @@ class Assets extends BaseApiController
 
     public function create()
     {
-        // Read from $_POST (form-encoded) first, fall back to JSON body
-        $body = $this->request->getPost() ?: $this->body();
+        // Collect body from every possible source for maximum compatibility
+        $raw  = file_get_contents('php://input');
+        $body = $_POST                                // form-encoded (most reliable)
+             ?: (json_decode($raw, true) ?? [])       // JSON body
+             ?: [];
 
         // Manual validation
         $errors = [];
@@ -65,9 +68,12 @@ class Assets extends BaseApiController
 
         if ($errors) {
             return $this->respond([
-                'status'  => 'error',
-                'message' => 'Validation failed',
-                'errors'  => $errors,
+                'status'       => 'error',
+                'message'      => 'Validation failed',
+                'errors'       => $errors,
+                'debug_post'   => $_POST,
+                'debug_raw'    => substr($raw, 0, 500),
+                'debug_ctype'  => $_SERVER['CONTENT_TYPE'] ?? 'none',
             ], 422);
         }
 
