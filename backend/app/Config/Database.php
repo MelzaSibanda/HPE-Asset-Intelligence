@@ -13,22 +13,17 @@ class Database extends Config
     {
         parent::__construct();
 
-        // Render injects DATABASE_URL for PostgreSQL — parse it here
-        $url = env('DATABASE_URL', '');
-        if ($url) {
-            $p    = parse_url($url);
-            $host = $p['host'] ?? 'localhost';
-            $port = $p['port'] ?? 5432;
-            $user = $p['user'] ?? '';
-            $pass = isset($p['pass']) ? urldecode($p['pass']) : '';
-            $db   = ltrim($p['path'] ?? '/', '/');
-        } else {
-            $host = env('DB_HOSTNAME', 'localhost');
-            $port = (int) env('DB_PORT', 5432);
-            $user = env('DB_USERNAME', '');
-            $pass = env('DB_PASSWORD', '');
-            $db   = env('DB_DATABASE', 'hpe_asset_intelligence');
-        }
+        // Use DATABASE_URL if set in environment, otherwise fall back to
+        // the Render-internal PostgreSQL URL (only reachable within Render)
+        $url = env('DATABASE_URL', '')
+            ?: 'postgresql://hpe_asset_intelligence_user:xHzU4TTMjZkjbZOAUxw9HueO6cfSKCyP@dpg-d86f5dbbc2fs73bs38o0-a/hpe_asset_intelligence';
+
+        $p    = parse_url($url);
+        $host = $p['host'] ?? 'localhost';
+        $port = $p['port'] ?? 5432;
+        $user = $p['user'] ?? '';
+        $pass = isset($p['pass']) ? urldecode($p['pass']) : '';
+        $db   = ltrim($p['path'] ?? '/', '/');
 
         $this->default = [
             'hostname' => $host,
