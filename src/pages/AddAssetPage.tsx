@@ -74,9 +74,10 @@ export function AddAssetPage() {
       toast.success(`Asset ${created.asset.asset_id} created`);
       navigate(`/assets/${created.asset.asset_id}`);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message ?? 'Failed to create asset';
-      toast.error(msg);
+      const resp = (err as { response?: { data?: { message?: string; errors?: Record<string, string> } } })?.response?.data;
+      // Show server-side field errors inline
+      if (resp?.errors) setErrors(resp.errors);
+      toast.error(resp?.message ?? 'Failed to create asset');
     } finally {
       setSaving(false);
     }

@@ -55,33 +55,46 @@ class Assets extends BaseApiController
     {
         $body = $this->body();
 
+        // Basic presence / type validation (no is_unique — handled below)
         if ($err = $this->validate2([
-            'asset_id'    => 'required|min_length[3]|max_length[20]|is_unique[assets.asset_id]',
-            'type_id'     => 'required|integer',
-            'model'       => 'required|max_length[50]',
-            'site_id'     => 'required|integer',
+            'asset_id' => 'required|min_length[3]|max_length[20]',
+            'type_id'  => 'required',
+            'model'    => 'required|max_length[50]',
+            'site_id'  => 'required',
         ], $body)) {
             return $err;
         }
 
-        $model = new AssetModel();
-        $model->insert([
-            'asset_id'          => strtoupper(trim($body['asset_id'])),
-            'type_id'           => (int) $body['type_id'],
-            'model'             => $body['model'],
-            'serial_number'     => $body['serial_number']     ?? null,
-            'epc_tag'           => $body['epc_tag']           ?? null,
-            'current_site_id'   => (int) $body['site_id'],
-            'status'            => $body['status']            ?? 'active',
-            'location_detail'   => $body['location_detail']   ?? 'Workshop',
-            'commissioned_at'   => $body['commissioned_at']   ?? date('Y-m-d'),
-            'tagged_at'         => $body['tagged_at']         ?? null,
-            'lifetime_hours'    => 0,
-            'monthly_hours'     => 0,
-            'battery_pct'       => $body['battery_pct']       ?? 100,
-        ]);
+        $assetId = strtoupper(trim($body['asset_id']));
 
-        return $this->created($model->detail(strtoupper(trim($body['asset_id']))), 'Asset created');
+        // Check uniqueness manually (is_unique has issues with the Postgre driver)
+        $exists = $this->db->table('assets')->where('asset_id', $assetId)->countAllResults();
+        if ($exists) {
+            return $this->bad('Validation failed', ['asset_id' => "Asset ID {$assetId} already exists"]);
+        }
+
+        try {
+            $model = new AssetModel();
+            $model->insert([
+                'asset_id'        => $assetId,
+                'type_id'         => (int) $body['type_id'],
+                'model'           => $body['model'],
+                'serial_number'   => $body['serial_number']   ?: null,
+                'epc_tag'         => $body['epc_tag']         ?: null,
+                'current_site_id' => (int) $body['site_id'],
+                'status'          => $body['status']          ?? 'active',
+                'location_detail' => $body['location_detail'] ?? 'Workshop',
+                'commissioned_at' => $body['commissioned_at'] ?? date('Y-m-d'),
+                'tagged_at'       => $body['tagged_at']       ?: null,
+                'lifetime_hours'  => 0,
+                'monthly_hours'   => 0,
+                'battery_pct'     => isset($body['battery_pct']) ? (int) $body['battery_pct'] : 100,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->bad('Could not save asset: ' . $e->getMessage());
+        }
+
+        return $this->created(['asset' => $model->detail($assetId)], 'Asset created');
     }
 
     public function update($assetId = null)
