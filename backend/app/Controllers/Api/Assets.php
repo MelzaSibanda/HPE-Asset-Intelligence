@@ -68,12 +68,9 @@ class Assets extends BaseApiController
 
         if ($errors) {
             return $this->respond([
-                'status'       => 'error',
-                'message'      => 'Validation failed',
-                'errors'       => $errors,
-                'debug_post'   => $_POST,
-                'debug_raw'    => substr($raw, 0, 500),
-                'debug_ctype'  => $_SERVER['CONTENT_TYPE'] ?? 'none',
+                'status'  => 'error',
+                'message' => 'Validation failed',
+                'errors'  => $errors,
             ], 422);
         }
 
