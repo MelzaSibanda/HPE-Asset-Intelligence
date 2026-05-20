@@ -18,6 +18,10 @@ DirectoryIndex index.html
     RewriteEngine On
     RewriteBase /
 
+    # Pass Authorization header through to PHP — Apache strips it by default
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
     # /api/* requests → CodeIgniter (index.php handles all API routing)
     RewriteRule ^api(/.*)?$ index.php [L,QSA]
 
