@@ -45,7 +45,14 @@ export async function getAsset(assetId: string) {
 }
 
 export async function createAsset(payload: Record<string, unknown>) {
-  const res = await api.post('/assets', payload);
+  // Send as form-encoded so PHP reads it from $_POST (more reliable than php://input through mod_rewrite)
+  const form = new URLSearchParams();
+  for (const [k, v] of Object.entries(payload)) {
+    if (v !== null && v !== undefined && v !== '') form.append(k, String(v));
+  }
+  const res = await api.post('/assets', form, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
   return res.data.data;
 }
 

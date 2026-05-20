@@ -53,16 +53,10 @@ class Assets extends BaseApiController
 
     public function create()
     {
-        // Try JSON body first, fall back to raw input for debugging
-        $body = $this->body();
+        // Read from $_POST (form-encoded) first, fall back to JSON body
+        $body = $this->request->getPost() ?: $this->body();
 
-        // If body is empty, try reading raw input directly
-        if (empty($body)) {
-            $raw  = file_get_contents('php://input');
-            $body = json_decode($raw, true) ?? [];
-        }
-
-        // Manual validation (avoids CI4 validation quirks with Postgre driver)
+        // Manual validation
         $errors = [];
         if (empty($body['asset_id'])) $errors['asset_id'] = 'Asset ID is required';
         if (empty($body['type_id']))  $errors['type_id']  = 'Type is required';
@@ -71,10 +65,9 @@ class Assets extends BaseApiController
 
         if ($errors) {
             return $this->respond([
-                'status'        => 'error',
-                'message'       => 'Validation failed',
-                'errors'        => $errors,
-                'received_body' => $body,  // temporary debug field
+                'status'  => 'error',
+                'message' => 'Validation failed',
+                'errors'  => $errors,
             ], 422);
         }
 
